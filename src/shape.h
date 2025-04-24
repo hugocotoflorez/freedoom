@@ -1,0 +1,287 @@
+#include "mesh.h"
+
+#define PI 3.1416f
+#define PIMED 1.5708f
+
+#define Point(a, b, c) a, b, c
+#define Face4(a, b, c, d) a, b, c, a, c, d
+#define vec_ptr(vec, i) ((vec).data() + (i))
+#define SIZE(arr) (sizeof((arr)) / sizeof(*(arr)))
+#define Texture(a, b) a, b
+#define Normal(a, b, c) a, b, c
+
+
+struct gvopts {
+        GLuint vertex_start, vertex_coords;
+        GLuint texture_start, texture_coords;
+        GLuint normal_start, normal_coords;
+        GLuint padd;
+        bool use_vertex, use_texture, use_normal;
+};
+
+class Shape
+{
+    private:
+    public:
+        Shape()
+        {
+        }
+        ~Shape()
+        {
+        }
+
+        static Mesh plane(float l)
+        {
+                static Mesh m = Mesh("plane");
+                GLuint vao, indexes_n;
+                __square(&vao, &indexes_n, l);
+                m.set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh cube(int l)
+        {
+                static Mesh m = Mesh("cube");
+                GLuint vao, indexes_n;
+                __cube(&vao, &indexes_n, l, l, l);
+                m.set_vao(vao, indexes_n);
+                return m;
+        }
+
+    private:
+        static void
+        __gen_vao(GLuint *VAO, size_t n, const float *vertex, size_t m, const GLuint *indexes,
+                  struct gvopts opts)
+        {
+                GLuint VBO, EBO;
+                glGenVertexArrays(1, VAO);
+                glBindVertexArray(*VAO);
+                glGenBuffers(1, &VBO);
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, n * sizeof(*vertex), vertex, GL_STATIC_DRAW);
+                glGenBuffers(1, &EBO);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, m * sizeof(*indexes), indexes, GL_STATIC_DRAW);
+
+                if (opts.use_vertex) {
+                        glVertexAttribPointer(0, opts.vertex_coords, GL_FLOAT, GL_FALSE,
+                                              opts.padd * sizeof(float), (void *) (sizeof(float) * opts.vertex_start));
+                        glEnableVertexAttribArray(0);
+                }
+                if (opts.use_texture) {
+                        glVertexAttribPointer(1, opts.texture_coords, GL_FLOAT, GL_FALSE,
+                                              opts.padd * sizeof(float), (void *) (sizeof(float) * opts.texture_start));
+                        glEnableVertexAttribArray(1);
+                }
+                if (opts.use_normal) {
+                        glVertexAttribPointer(2, opts.normal_coords, GL_FLOAT, GL_FALSE,
+                                              opts.padd * sizeof(float), (void *) (sizeof(float) * opts.normal_start));
+                        glEnableVertexAttribArray(2);
+                }
+
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+                glBindVertexArray(0);
+
+                glDeleteBuffers(1, &EBO);
+                glDeleteBuffers(1, &VBO);
+        }
+
+        void
+        __generateSphere(float radius, unsigned int sectorCount, unsigned int stackCount,
+                         std::vector<float> &vertices, std::vector<unsigned int> &indices)
+        {
+                vertices.clear();
+                indices.clear();
+
+                for (unsigned int i = 0; i <= stackCount; ++i) {
+                        float stackAngle = PI / 2 - i * (PI / stackCount);
+                        float xy = radius * cosf(stackAngle);
+                        float z = radius * sinf(stackAngle);
+
+                        for (unsigned int j = 0; j <= sectorCount; ++j) {
+                                float sectorAngle = j * (2 * PI / sectorCount);
+                                float x = xy * cosf(sectorAngle);
+                                float y = xy * sinf(sectorAngle);
+
+                                vertices.push_back(x);
+                                vertices.push_back(y);
+                                vertices.push_back(z);
+                        }
+                }
+
+                for (unsigned int i = 0; i < stackCount; ++i) {
+                        for (unsigned int j = 0; j < sectorCount; ++j) {
+                                unsigned int first = i * (sectorCount + 1) + j;
+                                unsigned int second = first + sectorCount + 1;
+
+                                indices.push_back(first);
+                                indices.push_back(second);
+                                indices.push_back(first + 1);
+
+                                indices.push_back(second);
+                                indices.push_back(second + 1);
+                                indices.push_back(first + 1);
+                        }
+                }
+        }
+
+        void
+        __sphere(GLuint *VAO, GLuint *indexes_n, float radius)
+        {
+                std::vector<float> vertices;
+                std::vector<unsigned int> indices;
+
+                __generateSphere(radius, 10, 10, vertices, indices);
+                *indexes_n = indices.size();
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.padd = 3;
+                opts.use_vertex = true;
+                opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, vertices.size(), vertices.data(), indices.size(), indices.data(), opts);
+        }
+
+        static void
+        __square(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
+        {
+                float vertices[] = {
+                        Point(-x / 2.0f, 0.0f, -x / 2.0f),// Texture(0, 0),
+                        Point(-x / 2.0f, 0.0f, x / 2.0f), //Texture(0, texture_scale * relation),
+                        Point(x / 2.0f, 0.0f, x / 2.0f), //Texture(texture_scale * relation, texture_scale * relation),
+                        Point(x / 2.0f, 0.0f, -x / 2.0f), //Texture(texture_scale * relation, 0),
+
+                        /* 3 ---- 2
+                         * |      |
+                         * |      |
+                         * 0 ---- 1 */
+                };
+
+                unsigned int indices[] = {
+                        Face4(0, 1, 2, 3),
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.padd = 3;
+                opts.use_vertex = true;
+                opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        /* Create a cube with a given (x, y, z) size */
+        static void
+        __cube_textured(GLuint *VAO, GLuint *indexes_n, float x, float y, float z, float texture_scale = 1, float relation = 1)
+        {
+                /*                                       | y
+             0(-x,y,-z)-> /---------/|<- (x,y,-z)4       |
+                         / |       / |                   |______ x
+                        /  |      /  |                  /
+          1(-x,y,z)->  /_________/   |  <- (x,y,z)5    / z
+         2(-x,-y,-z)-> |   /-----|---/ <- (x,-y,-z)6
+                       |  /      |  /
+                       | /       | /
+          3(-x,-y,z)-> |/________|/ <- (x,-y,z)7
+
+
+                */
+
+                x /= 2;
+                y /= 2;
+                z /= 2;
+
+                float vertices[] = {
+                        Point(-x, y, -z), Texture(0, 0),
+                        Point(-x, y, z), Texture(texture_scale * relation, 0),
+                        Point(-x, -y, -z), Texture(texture_scale * relation, texture_scale * relation),
+                        Point(-x, -y, z), Texture(0, texture_scale * relation),
+                        Point(x, y, -z), Texture(0, texture_scale * relation),
+                        Point(x, y, z), Texture(texture_scale * relation, texture_scale * relation),
+                        Point(x, -y, -z), Texture(texture_scale * relation, 0),
+                        Point(x, -y, z), Texture(0, 0)
+                };
+
+                GLuint indices[] = {
+                        Face4(0, 1, 5, 4), // top
+                        Face4(0, 2, 3, 1), // left
+                        Face4(6, 4, 5, 7), // right
+                        Face4(1, 3, 7, 5), // front
+                        Face4(0, 4, 6, 2), // back
+                        Face4(3, 2, 6, 7), // down
+                };
+
+                *indexes_n = SIZE(indices);
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.texture_start = 3;
+                opts.texture_coords = 2;
+                opts.padd = 5;
+                opts.use_vertex = true;
+                opts.use_texture = true;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        /* Create a cube with a given (x, y, z) size */
+        static void
+        __cube(GLuint *VAO, GLuint *indexes_n, float x, float y, float z)
+        {
+                /*                                       | y
+             0(-x,y,-z)-> /---------/|<- (x,y,-z)4       |
+                         / |       / |                   |______ x
+                        /  |      /  |                  /
+          1(-x,y,z)->  /_________/   |  <- (x,y,z)5    / z
+         2(-x,-y,-z)-> |   /-----|---/ <- (x,-y,-z)6
+                       |  /      |  /
+                       | /       | /
+          3(-x,-y,z)-> |/________|/ <- (x,-y,z)7
+
+                */
+
+                x /= 2;
+                y /= 2;
+                z /= 2;
+
+                float vertices[] = {
+                        Point(-x, y, -z),
+                        Point(-x, y, z),
+                        Point(-x, -y, -z),
+                        Point(-x, -y, z),
+                        Point(x, y, -z),
+                        Point(x, y, z),
+                        Point(x, -y, -z),
+                        Point(x, -y, z),
+                };
+
+                GLuint indices[] = {
+                        Face4(0, 1, 5, 4), // top
+                        Face4(0, 2, 3, 1), // left
+                        Face4(6, 4, 5, 7), // right
+                        Face4(1, 3, 7, 5), // front
+                        Face4(0, 4, 6, 2), // back
+                        Face4(3, 2, 6, 7), // down
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.padd = 3;
+                opts.use_vertex = true;
+                opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+};
