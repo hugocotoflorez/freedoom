@@ -1,12 +1,8 @@
 /******************************************
   Lectura y Creacion de Shaders
 *******************************************/
-
-
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS // Evitamos alguno errores de funciones no seguras
-#endif
-
+#ifndef SET_SHADERS_
+#define SET_SHADERS_
 
 // Librerias necesarias
 #include <glad/glad.h>
@@ -20,7 +16,7 @@
 // Para leer los ficheros de texto plano
 
 
-char *
+static char *
 textFileRead(const char *fn)
 {
         FILE *fichero;
@@ -54,7 +50,7 @@ textFileRead(const char *fn)
 
 // Nos indica e imprime por pantalla si hay algun error al crear el shader o el program
 
-void
+static void
 printShaderInfoLog(GLuint obj)
 {
         int infologLength = 0;
@@ -71,7 +67,7 @@ printShaderInfoLog(GLuint obj)
         }
 }
 
-void
+static void
 printProgramInfoLog(GLuint obj)
 {
         int infologLength = 0;
@@ -89,7 +85,7 @@ printProgramInfoLog(GLuint obj)
 }
 
 
-GLuint
+static GLuint
 setShaders(const char *nVertx, const char *nFrag)
 {
         // Definicion vertex y fragment shader
@@ -148,7 +144,7 @@ setShaders(const char *nVertx, const char *nFrag)
         return (progShader);
 }
 
-GLuint
+static GLuint
 setShaders_str(const char *nVertx, const char *nFrag)
 {
         GLuint vertexShader, fragmentShader;
@@ -184,3 +180,5 @@ setShaders_str(const char *nVertx, const char *nFrag)
 
         return (progShader);
 }
+
+#endif

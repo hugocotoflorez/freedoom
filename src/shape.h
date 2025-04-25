@@ -1,10 +1,12 @@
 #include "mesh.h"
+#include "camview.h"
 
 #define PI 3.1416f
 #define PIMED 1.5708f
 
 #define Point(a, b, c) a, b, c
 #define Face4(a, b, c, d) a, b, c, a, c, d
+#define Face3(a, b, c) a, b, c
 #define vec_ptr(vec, i) ((vec).data() + (i))
 #define SIZE(arr) (sizeof((arr)) / sizeof(*(arr)))
 #define Texture(a, b) a, b
@@ -30,21 +32,39 @@ class Shape
         {
         }
 
-        static Mesh plane(float l)
+        static Mesh *plane(float l)
         {
-                static Mesh m = Mesh("plane");
+                Mesh *m = new Mesh("plane");
                 GLuint vao, indexes_n;
                 __square(&vao, &indexes_n, l);
-                m.set_vao(vao, indexes_n);
+                m->set_vao(vao, indexes_n);
                 return m;
         }
 
-        static Mesh cube(int l)
+        static CamView *portal_plane(float l)
         {
-                static Mesh m = Mesh("cube");
+                CamView *p = new CamView("portal plane");
+                GLuint vao, indexes_n;
+                __square_textured(&vao, &indexes_n, l);
+                p->set_vao(vao, indexes_n);
+                return p;
+        }
+
+        static Mesh *cube(int l)
+        {
+                Mesh *m = new Mesh("cube");
                 GLuint vao, indexes_n;
                 __cube(&vao, &indexes_n, l, l, l);
-                m.set_vao(vao, indexes_n);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh *camera()
+        {
+                Mesh *m = new Mesh("Camera");
+                GLuint vao, indexes_n;
+                __camera(&vao, &indexes_n, 0.3f);
+                m->set_vao(vao, indexes_n);
                 return m;
         }
 
@@ -148,11 +168,12 @@ class Shape
         static void
         __square(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
         {
+                float _x = x / 2.0f;
                 float vertices[] = {
-                        Point(-x / 2.0f, 0.0f, -x / 2.0f),// Texture(0, 0),
-                        Point(-x / 2.0f, 0.0f, x / 2.0f), //Texture(0, texture_scale * relation),
-                        Point(x / 2.0f, 0.0f, x / 2.0f), //Texture(texture_scale * relation, texture_scale * relation),
-                        Point(x / 2.0f, 0.0f, -x / 2.0f), //Texture(texture_scale * relation, 0),
+                        Point(-_x, 0.0f, -_x), // Texture(0, 0),
+                        Point(-_x, 0.0f, _x), // Texture(0, texture_scale * relation),
+                        Point(_x, 0.0f, _x), // Texture(texture_scale * relation, texture_scale * relation),
+                        Point(_x, 0.0f, -_x), // Texture(texture_scale * relation, 0),
 
                         /* 3 ---- 2
                          * |      |
@@ -172,6 +193,41 @@ class Shape
                 opts.padd = 3;
                 opts.use_vertex = true;
                 opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        static void
+        __square_textured(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
+        {
+                float _x = x / 2.0f;
+                float vertices[] = {
+                        Point(-_x, 0.0f, -_x), Texture(0, texture_scale * relation),
+                        Point(-_x, 0.0f, _x), Texture(0, 0),
+                        Point(_x, 0.0f, _x), Texture(texture_scale * relation, 0),
+                        Point(_x, 0.0f, -_x), Texture(texture_scale * relation, texture_scale * relation),
+
+                        /* 3 ---- 2
+                         * |      |
+                         * |      |
+                         * 0 ---- 1 */
+                };
+
+                unsigned int indices[] = {
+                        Face4(0, 1, 2, 3),
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.texture_start = 3;
+                opts.texture_coords = 2;
+                opts.padd = 5;
+                opts.use_vertex = true;
+                opts.use_texture = true;
                 opts.use_normal = false;
 
                 __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
@@ -270,6 +326,54 @@ class Shape
                         Face4(1, 3, 7, 5), // front
                         Face4(0, 4, 6, 2), // back
                         Face4(3, 2, 6, 7), // down
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.padd = 3;
+                opts.use_vertex = true;
+                opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        /* Create a cube with a given (x, y, z) size */
+        static void
+        __camera(GLuint *VAO, GLuint *indexes_n, float size = 0.0f)
+        {
+                float _size = size / 2.0f;
+                float vertices[] = {
+                        Point(-_size, _size, -_size), // 0
+                        Point(-_size, _size, _size), // 1
+                        Point(-_size, -_size, -_size), // 2
+                        Point(-_size, -_size, _size), // 3
+                        Point(_size, _size, -_size), // 4
+                        Point(_size, _size, _size), // 5
+                        Point(_size, -_size, -_size), // 6
+                        Point(_size, -_size, _size), // 7
+                        Point(0.0f, 0.0f, -_size), // 8
+                        Point(_size, _size, -_size * 3), // 9
+                        Point(-_size, _size, -_size * 3), // 10
+                        Point(-_size, -_size, -_size * 3), // 11
+                        Point(_size, -_size, -_size * 3), // 12
+                };
+
+                GLuint indices[] = {
+                        Face4(0, 1, 5, 4), // top
+                        Face4(0, 2, 3, 1), // left
+                        Face4(6, 4, 5, 7), // right
+                        Face4(1, 3, 7, 5), // front
+                        Face4(0, 4, 6, 2), // back
+                        Face4(3, 2, 6, 7), // down
+                        Face4(10, 11, 12, 9), // camera front
+                        Face3(8, 10, 9),
+                        Face3(8, 11, 10),
+                        Face3(8, 12, 11),
+                        Face3(8, 9, 12),
                 };
 
                 *indexes_n = SIZE(indices);

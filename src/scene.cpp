@@ -1,47 +1,162 @@
 #include "scene.h"
 #include "camera.h"
+#include "camview.h"
 #include "mesh.h"
 #include "setShaders.h"
+#include <cstdio>
+#include <iterator>
+
 
 #define LOG_PRINT 0
 #include "../thirdparty/frog/frog.h"
 
-Camera &
-Scene::get_camera(unsigned int index = 0)
+Camera *
+Scene::get_camera(int index)
 {
-        // LOG("Calling  get_camera %u\n", index);
-        if (index >= cameras.size()) {
+        if (index < 0)
+                index = camera_index;
+
+        if (index >= cameras.size())
                 PANIC("Can not locate camera");
-        }
+
         return cameras.at(index);
 }
 
-void
-Scene::add_camera(Camera c)
+int
+IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
 {
-        cameras.push_back(c);
-        LOG("Adding camera %ld\n", cameras.size());
+        if (sphere == nullptr) return 0;
+
+        vec3 center = sphere->get_position();
+        float radius = sphere->get_radius();
+
+        vec3 m = p - center;
+        float b = dot(m, d);
+        float c = dot(m, m) - radius * radius;
+
+        // Salida temprana si el rayo parte fuera y se aleja de la esfera
+        if (c > 0.0f && b > 0.0f) return 0;
+
+        float discr = b * b - c;
+
+        // Discriminante negativo → sin intersección
+        if (discr < 0.0f) return 0;
+
+        // Se calcula el t más pequeño (entrada)
+        float t_hit = -b - sqrt(discr);
+
+        // Si el rayo parte desde dentro, usar t = 0
+        if (t_hit < 0.0f) t_hit = 0.0f;
+
+        // Resultado final
+        t = t_hit;
+        q = p + t * d;
+        return 1;
+}
+
+
+Mesh *
+Scene::get_raycast_collision(vec2 mouse)
+{
+        Camera *camera = get_camera();
+        /* Si no funciona con view cambiar a transform */
+        mat4 toWorld = inverse(camera->get_projection() * camera->get_view());
+
+        vec4 from = toWorld * vec4(mouse, -1.0f, 1.0f);
+        vec4 to = toWorld * vec4(mouse, 1.0f, 1.0f);
+
+        from /= from.w; // perspective divide ("normalize" homogeneous coordinates)
+        to /= to.w;
+
+        int clickedObject = -1;
+        float minDist = 10000.0f;
+
+        for (size_t i = 0; i < meshes.size(); ++i) {
+                float t; // collision distance
+                vec3 q; // collision point
+                vec3 direction = vec3(to) - vec3(from);
+                if (IntersectRaySphere(vec3(to), direction, meshes.at(i)->get_sphere_collider(), t, q)) {
+                        // object i has been clicked. probably best to find the minimum t1 (front-most object)
+                        if (t < minDist) {
+                                minDist = t;
+                                clickedObject = (int) i;
+                                printf("Ray collide with: %s\n", meshes.at(i)->get_name());
+                        }
+                }
+        }
+
+        if (clickedObject >= 0 && clickedObject < meshes.size()) {
+                printf("Click on %s\n", meshes.at(clickedObject)->get_name());
+                return meshes.at(clickedObject);
+        } else if (clickedObject >= 0) {
+                printf("ERR Click on %d\n", clickedObject);
+        }
+
+        return nullptr;
+}
+
+int
+Scene::get_camera_id()
+{
+        return camera_index;
 }
 
 void
-Scene::add_mesh(Mesh m)
+Scene::set_camera(GLuint index)
 {
-        m.set_scene(this);
+        if (index < cameras.size())
+                camera_index = index;
+}
+
+int
+Scene::add_camera(Camera *c)
+{
+        cameras.push_back(c);
+        c->set_scene(this);
+        return cameras.size() - 1;
+}
+
+void
+Scene::add_mesh(Mesh *m)
+{
+        m->set_scene(this);
         meshes.push_back(m);
+}
+
+/* Render render-textures */
+void
+Scene::render()
+{
+        for (auto m : meshes)
+                if (m->need_render) {
+                        /* No se si render recursion funciona asi. La idea es que se
+                         * vea un camview a traves del otro pero solo RENDER_RECURSION
+                         * saltos. Si se activa hide - show entonces no aparece nunca. */
+                        int render_recursion = 1;
+                        for (int i = 0; i < render_recursion; i++) {
+                                // m->hide();
+                                // printf("Render %s\n", m->get_name());
+                                ((CamView *) m)->render();
+                                // m->show();
+                        }
+                }
 }
 
 void
 Scene::draw()
 {
         for (auto m : meshes)
-                m.draw();
+                m->draw();
+
+        for (auto c : cameras)
+                c->draw();
 }
 
 void
 Scene::init()
 {
         for (auto m : meshes)
-                m.init();
+                m->init();
 }
 
 
@@ -49,6 +164,13 @@ void
 Scene::use_shader(const char *vs, const char *fs)
 {
         GLuint shader = setShaders(vs, fs);
-        for (auto &m : meshes)
-                m.set_shader(shader);
+        for (auto m : meshes)
+                m->set_shader(shader);
+}
+
+void
+Scene::next_camera()
+{
+        camera_index = (camera_index + 1) % cameras.size();
+        printf("Camera index: %d\n", camera_index);
 }

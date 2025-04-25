@@ -1,13 +1,22 @@
 #include "mesh.h"
 #include "camera.h"
 #include "scene.h"
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string>
 
 #define LOG_PRINT 0
 #include "../thirdparty/frog/frog.h"
+
+vec3
+SphereCollider::get_position()
+{
+        return parent->get_absolute_position();
+}
+
 
 void
 Mesh::show()
@@ -58,10 +67,25 @@ Mesh::get_absolute_model()
         return model;
 }
 
+mat4
+Mesh::get_default_absolute_model()
+{
+        if (parent) {
+                return parent->get_default_absolute_model() * default_model;
+        }
+        return default_model;
+}
+
 vec3
 Mesh::get_absolute_position()
 {
         return vec3(get_absolute_model()[3]);
+}
+
+vec3
+Mesh::get_default_absolute_position()
+{
+        return vec3(get_default_absolute_model()[3]);
 }
 
 mat3
@@ -104,6 +128,12 @@ set_before_draw_function(void (*_before_draw)(Mesh *))
         return *this;
 }
 
+void
+Mesh::set_color(int c)
+{
+        color = c;
+}
+
 unsigned int
 Mesh::
 get_shader()
@@ -128,7 +158,7 @@ translate(vec3 v)
 }
 
 void
-Mesh::look_at(vec3 view_pos)
+Mesh::look_at2d(vec3 view_pos)
 {
         vec3 mesh_pos = get_position();
         mat3 rotation = get_default_rotation_matrix();
@@ -142,26 +172,65 @@ Mesh::look_at(vec3 view_pos)
 }
 
 void
+Mesh::look_at(vec3 view_pos)
+{
+        vec3 mesh_pos = get_position();
+        vec3 dir = normalize(view_pos - mesh_pos);
+        vec3 up = vec3(0.0f, 1.0f, 0.0f); // Vector 'up' del mundo
+        mat4 rotation = glm::inverse(glm::lookAt(mesh_pos, view_pos, up));
+        mat4 translation = glm::translate(mat4(1.0f), mesh_pos);
+        model = translation * rotation;
+}
+
+void
+Mesh::add_texture(GLuint texture)
+{
+        textures.push_back(texture);
+}
+
+void
 Mesh::draw(mat4 _model)
 {
         _model = _model * model;
 
-        printf("Model: %s -- vao:%d, indexes:%d (shader:%d)\n", name, vao, indexes_n, __shader);
+        // static bool already_print = false;
+        // if (!already_print) {
+        //         printf("Model: %s -- vao:%d, indexes:%d (shader:%d)\n", name, vao, indexes_n, __shader);
+        //         already_print = true;
+        // }
 
         for (Mesh *attached_mesh : attached) {
                 (*attached_mesh).draw(_model);
         }
 
-        //if (!printable) return;
+        if (!printable) return;
         if (before_draw) before_draw(this);
 
         glUseProgram(__shader);
 
-        int camera_id = 0;
-        Camera cam = ((Scene *) scene)->get_camera(camera_id);
-        cam.set_camera(__shader);
+        ((Scene *) scene)->get_camera()->set_camera(__shader);
 
+        /* Set color */
         glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(color));
+
+        /* Set texture */
+        GLuint textureLoc = glGetUniformLocation(__shader, "textures");
+        glUniform1i(glGetUniformLocation(__shader, "texture_count"), textures.size());
+        for (size_t i = 0; i < textures.size(); ++i) {
+                GLuint texture = textures.at(i);
+                // printf("Using texture %d/%ld for mesh %s\n", texture, textures.size(), get_name());
+                if (glIsTexture(texture)) {
+                        glActiveTexture(GL_TEXTURE0 + i);
+                        textureLoc = glGetUniformLocation(__shader, ("textures[" + std::to_string(i) + "]").c_str());
+                        glUniform1i(textureLoc, i);
+                        glBindTexture(GL_TEXTURE_2D, texture);
+
+                } else if (texture != 0) {
+                        printf("Texture %d failed!\n", texture);
+                        exit(texture);
+                }
+        }
+
 
         glUniformMatrix4fv(glGetUniformLocation(__shader, "model"), 1, GL_FALSE, value_ptr(_model));
 
@@ -169,8 +238,15 @@ Mesh::draw(mat4 _model)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
 
+        /* Print orange lines above filled faces */
+        glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0xFF4D00));
+        glBindVertexArray(vao);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+        /* ------------------------------ */
+
         glBindVertexArray(0);
-        //glBindTexture(GL_TEXTURE_2D, 0);
+        // glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void
@@ -199,16 +275,32 @@ Mesh::set_scene(void *s)
         scene = s;
 }
 
+void *
+Mesh::get_scene()
+{
+        return scene;
+}
+
 void
 Mesh::delete_vao()
 {
         glDeleteVertexArrays(1, &vao);
 }
 
-Mesh &
-Mesh::
-init()
+void
+Mesh::set_dynamic_camera(int c)
+{
+        dynamic_camera = c;
+}
+
+SphereCollider *
+Mesh::get_sphere_collider()
+{
+        return sphere_collider;
+}
+
+void
+Mesh::init()
 {
         default_model = model;
-        return *this;
 }
