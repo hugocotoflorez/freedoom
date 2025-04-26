@@ -108,14 +108,21 @@ Scene::get_raycast_collision(vec2 mouse)
                 }
         }
 
-        if (clickedObject >= 0 && clickedObject < meshes.size()) {
+        if (clickedObject >= 0) {
                 printf("Click on %s\n", meshes.at(clickedObject)->get_name());
+                meshes.at(clickedObject)->get_sphere_collider()->on_collision();
                 return meshes.at(clickedObject);
-        } else if (clickedObject >= 0) {
-                printf("ERR Click on %d\n", clickedObject);
         }
 
         return nullptr;
+}
+
+void
+Scene::set_on_collision(void (*_on_collide)(SphereCollider *))
+{
+        for (auto m : meshes) {
+                m->get_sphere_collider()->set_on_collide(_on_collide);
+        }
 }
 
 int

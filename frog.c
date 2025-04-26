@@ -17,9 +17,9 @@ main(int argc, char *argv[])
 
          // UNREACHABLE("Just do not execute");
 
-        //frog_cmd_wait("sudo", "systemctl", "stop", "keyd");
+        frog_cmd_wait("sudo", "systemctl", "stop", "keyd");
         frog_cmd_wait("./" FILENAME);
-        //frog_cmd_wait("sudo", "systemctl", "start", "keyd");
+        frog_cmd_wait("sudo", "systemctl", "start", "keyd");
         frog_cmd_wait("rm", FILENAME);
         frog_cmd_wait("rm", "objs", "-r");
 

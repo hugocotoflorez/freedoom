@@ -8,6 +8,8 @@
 
 #include <glad.h>
 
+#include <GLFW/glfw3.h>
+
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -15,12 +17,16 @@ using namespace glm;
 using namespace std;
 
 enum draw_opts {
-        DRAW_NONE,
-        DRAW_LINE,
-        DRAW_FILL,
+        DRAW_NONE = 0,
+        DRAW_LINE = 1 << 1,
+        DRAW_FILL = 1 << 2,
+        DRAW_OUTLINE = 1 << 3,
 };
 
 class Mesh;
+class SphereCollider;
+
+typedef void (*on_collide_func)(SphereCollider *);
 
 class SphereCollider
 {
@@ -28,6 +34,7 @@ class SphereCollider
         float radius;
         Mesh *parent;
         Mesh *sphere; // representation of itself
+        vector<on_collide_func> on_collide;
 
     public:
         SphereCollider(float r, Mesh *p)
@@ -55,6 +62,23 @@ class SphereCollider
                 return sphere;
         }
 
+        void set_on_collide(void (*_on_collide)(SphereCollider *))
+        {
+                on_collide.push_back(_on_collide);
+        }
+
+        void on_collision()
+        {
+                if (on_collide.size() > 0)
+                        for (auto func : on_collide)
+                                func(this);
+        }
+
+        Mesh *get_parent()
+        {
+                return parent;
+        }
+
         void set_sphere(float r);
         vec3 get_position();
 };
@@ -78,6 +102,10 @@ class Mesh
         unsigned int __shader;
         void (*before_draw)(Mesh *);
         SphereCollider *sphere_collider;
+        bool is_selected;
+        void (*input_handler)(GLFWwindow *);
+        vector<void (*)(Mesh *)> on_selected;
+        vector<void (*)(Mesh *)> on_deselected;
 
     protected:
         void *scene;
@@ -99,7 +127,9 @@ class Mesh
           before_draw(nullptr),
           scene(nullptr),
           dynamic_camera(-1),
-          sphere_collider(nullptr)
+          sphere_collider(nullptr),
+          is_selected(false),
+          input_handler(nullptr)
         {
                 if (has_collider)
                         sphere_collider = new SphereCollider(0.7f, this);
@@ -138,6 +168,42 @@ class Mesh
         void *get_scene();
         void add_texture(GLuint);
         SphereCollider *get_sphere_collider();
+        void select()
+        {
+                is_selected = true;
+                for (auto func : on_selected)
+                        func(this);
+        }
+        void deselect()
+        {
+                is_selected = false;
+                for (auto func : on_deselected)
+                        func(this);
+        }
+        bool selected()
+        {
+                return is_selected;
+        }
+
+        void set_on_select(void (*func)(Mesh *))
+        {
+                on_selected.push_back(func);
+        }
+
+        void set_on_deselect(void (*func)(Mesh *))
+        {
+                on_deselected.push_back(func);
+        }
+
+        void set_input_handler(void (*_input_handler)(GLFWwindow *))
+        {
+                input_handler = _input_handler;
+        }
+
+        void (*get_input_handler())(GLFWwindow *)
+        {
+                return input_handler;
+        }
 };
 
 #endif

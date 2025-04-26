@@ -215,9 +215,6 @@ Mesh::draw(mat4 _model, int _do)
 
         ((Scene *) scene)->get_camera()->set_camera(__shader);
 
-        /* Set color */
-        glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(color));
-
         /* Set texture */
         GLuint textureLoc = glGetUniformLocation(__shader, "textures");
         glUniform1i(glGetUniformLocation(__shader, "texture_count"), textures.size());
@@ -236,25 +233,38 @@ Mesh::draw(mat4 _model, int _do)
                 }
         }
 
-
         glUniformMatrix4fv(glGetUniformLocation(__shader, "model"), 1, GL_FALSE, value_ptr(_model));
 
+        if (is_selected)
+                _do |= DRAW_OUTLINE;
+
+        if (_do & DRAW_OUTLINE) {
+                glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0xFFDE21));
+                glLineWidth(10);
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glCullFace(GL_FRONT);
+                glBindVertexArray(vao);
+                glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+                glCullFace(GL_BACK);
+        }
+
         if (_do & DRAW_FILL) {
+                glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(color));
                 glBindVertexArray(vao);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
                 glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
         }
 
-        /* Print orange lines above filled faces */
-        if (_do & DRAW_LINE) {
-                glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0xFF4D00));
+        /* Print lines above filled faces */
+        if (_do & DRAW_LINE && _do & ~DRAW_OUTLINE) {
+                glLineWidth(1);
+                glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0x000000));
                 glBindVertexArray(vao);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
         }
-        /* ------------------------------ */
 
-        if (sphere_collider && sphere_collider->is_pintable())
+        if (sphere_collider && sphere_collider->is_pintable() && false)
                 sphere_collider->draw(_model);
 
         glBindVertexArray(0);

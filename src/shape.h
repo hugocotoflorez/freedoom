@@ -1,5 +1,6 @@
 #include "camview.h"
 
+#include "actor.h"
 #include "camera.h"
 #include "mesh.h"
 
@@ -43,7 +44,7 @@ class Shape
                 return m;
         }
 
-        static CamView *portal_plane(float l)
+        static CamView *camviewer_plane(float l)
         {
                 CamView *p = new CamView("portal plane");
                 GLuint vao, indexes_n;
@@ -66,6 +67,15 @@ class Shape
                 Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
                 GLuint vao, indexes_n;
                 __cube(&vao, &indexes_n, l, l, l);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Actor *actor(float l)
+        {
+                Actor *m = new Actor("Actor");
+                GLuint vao, indexes_n;
+                __cube(&vao, &indexes_n, l/2, l, l/2);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -225,6 +235,7 @@ class Shape
 
                 unsigned int indices[] = {
                         Face4(0, 1, 2, 3),
+                        Face4(0, 3, 2, 1),
                 };
 
                 *indexes_n = SIZE(indices);

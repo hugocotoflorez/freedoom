@@ -11,16 +11,13 @@
 #include <glm/glm.hpp>
 using namespace glm;
 
-/* Enable VSync. FPS limited to screen refresh rate
- * (0: disable, 1: enable, undef: default) */
-#define VSYNC 0
+#include "settings.h"
 
-/* Mouse sensibility */
-#define MOUSE_SENS_X 2.0f
-#define MOUSE_SENS_Y 2.0f
-
-/* Show fps if SHOW_FPS is defined and not 0 */
-#define SHOW_FPS 0
+#if defined(SHOW_FPS) && SHOW_FPS
+#define show_fps(...) printf(__VA_ARGS__)
+#else
+#define show_fps(...)
+#endif
 
 #define HexColor(hex_color)                     \
         ((hex_color & 0xFF0000) >> 16) / 256.0, \
@@ -35,78 +32,23 @@ using namespace glm;
 
 #define BG_COLOR HexColor(0x87CEEB), 1.0
 
+
 GLuint width = 640;
 GLuint height = 480;
 
 Scene *main_scene;
 
-static double *
+double *
 interframe_time()
 {
         static double interframe_time = 0;
         return &interframe_time;
 }
 
-static void
-process_mouse(GLFWwindow *window)
+vec2
+get_window_size()
 {
-        static bool firstMouse = true;
-        static float lastX, lastY;
-        double _xpos, _ypos;
-
-        glfwGetCursorPos(window, &_xpos, &_ypos);
-        float xpos = static_cast<float>(_xpos);
-        float ypos = static_cast<float>(_ypos);
-        if (firstMouse) {
-                lastX = xpos;
-                lastY = ypos;
-                firstMouse = false;
-        }
-
-        float xoffset = -xpos + lastX;
-        float yoffset = ypos - lastY;
-
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
-                main_scene->get_camera()->axis_rotate(vec3(MOUSE_SENS_X * xoffset * *interframe_time(),
-                                                           MOUSE_SENS_Y * yoffset * *interframe_time() * 10.0f,
-                                                           0.0f));
-        }
-
-        static bool lock_l = false;
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS &&!lock_l) {
-                /* The *2.0f - 1.0 is to transform from [0,1] to [-1, 1] */
-                vec2 mouse = (vec2(xpos, ypos) / vec2(width, height)) * 2.0f - 1.0f;
-                mouse.y = -mouse.y; // origin is top-left and +y mouse is down
-
-                main_scene->get_raycast_collision(mouse);
-                lock_l = true;
-        }
-
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE &&lock_l) {
-                lock_l = false;
-        }
-
-
-
-        lastX = xpos;
-        lastY = ypos;
-}
-
-static void
-process_input(GLFWwindow *window)
-{
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-                glfwSetWindowShouldClose(window, true);
-
-        static bool t_lock = false;
-        if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !t_lock) {
-                main_scene->next_camera();
-                printf("T press\n");
-                t_lock = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE && t_lock) {
-                t_lock = false;
-        }
+        return vec2(width, height);
 }
 
 static void
@@ -138,9 +80,7 @@ fps()
 
         if (t - last_time >= 1) {
                 last_time = t;
-#if defined(SHOW_FPS) && SHOW_FPS
-                printf("[FPS] %u\n", fps);
-#endif
+                show_fps("[FPS] %u\n", fps);
                 fps = 0;
         }
 }
@@ -153,8 +93,7 @@ mainloop(GLFWwindow *window)
         main_scene->init();
 
         while (!glfwWindowShouldClose(window)) {
-                process_input(window);
-                process_mouse(window);
+                main_scene->process_input(window);
                 glfwPollEvents();
 
                 fps();

@@ -31,7 +31,6 @@ class CamView : public Mesh
                 glGenFramebuffers(1, &frame_buffer);
                 assert(frame_buffer > 0);
                 glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
-                // printf("New frame_buffer: %d\n", frame_buffer);
         }
 
         void gen_texture()

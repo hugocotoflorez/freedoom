@@ -58,7 +58,12 @@ class Camera
         void set_camera(int shader);
         void set_scene(void *s);
         mat4 get_projection();
-        Mesh* get_mesh();
+        Mesh *get_mesh();
+
+        void set_up(vec3 u)
+        {
+                up = u;
+        }
 
         /* Rotate around given axis */
         void axis_rotate(vec3);
