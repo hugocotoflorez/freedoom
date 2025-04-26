@@ -1,3 +1,6 @@
+#ifndef CAM_VIEW_H_
+#define CAM_VIEW_H_
+
 #include "camera.h"
 #include "mesh.h"
 
@@ -117,3 +120,5 @@ class CamView : public Mesh
                 unbind();
         }
 };
+
+#endif // CAM_VIEW_H_

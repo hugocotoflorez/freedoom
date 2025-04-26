@@ -15,7 +15,7 @@ main(int argc, char *argv[])
         frog_shell_cmd("mv *.o objs")
         frog_shell_cmd("g++ objs/* -lglad -lglfw -ggdb -o" FILENAME);
 
-        // UNREACHABLE("Just do not execute");
+         // UNREACHABLE("Just do not execute");
 
         //frog_cmd_wait("sudo", "systemctl", "stop", "keyd");
         frog_cmd_wait("./" FILENAME);

@@ -1,5 +1,7 @@
-#include "mesh.h"
 #include "camview.h"
+
+#include "camera.h"
+#include "mesh.h"
 
 #define PI 3.1416f
 #define PIMED 1.5708f
@@ -50,9 +52,18 @@ class Shape
                 return p;
         }
 
-        static Mesh *cube(int l)
+        static Mesh *cube(float l)
         {
                 Mesh *m = new Mesh("cube");
+                GLuint vao, indexes_n;
+                __cube(&vao, &indexes_n, l, l, l);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh *cube_nocollider(float l)
+        {
+                Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
                 GLuint vao, indexes_n;
                 __cube(&vao, &indexes_n, l, l, l);
                 m->set_vao(vao, indexes_n);
@@ -64,6 +75,36 @@ class Shape
                 Mesh *m = new Mesh("Camera");
                 GLuint vao, indexes_n;
                 __camera(&vao, &indexes_n, 0.3f);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh *
+        line(vec3 from, vec3 to)
+        {
+                Mesh *m = new Mesh("line");
+                GLuint vao, indexes_n;
+                __line(&vao, &indexes_n, from, to);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh *
+        sphere(float r)
+        {
+                Mesh *m = new Mesh("sphere");
+                GLuint vao, indexes_n;
+                __sphere(&vao, &indexes_n, r);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Mesh *
+        sphere_collider(float r)
+        {
+                Mesh *m = new Mesh("sphere", 0xFF007F, true, false, false);
+                GLuint vao, indexes_n;
+                __sphere(&vao, &indexes_n, r);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -106,7 +147,7 @@ class Shape
                 glDeleteBuffers(1, &VBO);
         }
 
-        void
+        static void
         __generateSphere(float radius, unsigned int sectorCount, unsigned int stackCount,
                          std::vector<float> &vertices, std::vector<unsigned int> &indices)
         {
@@ -145,11 +186,11 @@ class Shape
                 }
         }
 
-        void
+        static void
         __sphere(GLuint *VAO, GLuint *indexes_n, float radius)
         {
-                std::vector<float> vertices;
-                std::vector<unsigned int> indices;
+                vector<float> vertices;
+                vector<unsigned int> indices;
 
                 __generateSphere(radius, 10, 10, vertices, indices);
                 *indexes_n = indices.size();
@@ -164,6 +205,7 @@ class Shape
 
                 __gen_vao(VAO, vertices.size(), vertices.data(), indices.size(), indices.data(), opts);
         }
+
 
         static void
         __square(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
@@ -317,6 +359,54 @@ class Shape
                         Point(x, y, z),
                         Point(x, -y, -z),
                         Point(x, -y, z),
+                };
+
+                GLuint indices[] = {
+                        Face4(0, 1, 5, 4), // top
+                        Face4(0, 2, 3, 1), // left
+                        Face4(6, 4, 5, 7), // right
+                        Face4(1, 3, 7, 5), // front
+                        Face4(0, 4, 6, 2), // back
+                        Face4(3, 2, 6, 7), // down
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.padd = 3;
+                opts.use_vertex = true;
+                opts.use_texture = false;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        static void
+        __line(GLuint *VAO, GLuint *indexes_n, vec3 from, vec3 to, float width = 0.1)
+        {
+                /*                                       | y
+             0(-x,y,-z)-> /---------/|<- (x,y,-z)4       |
+                         / |       / |                   |______ x
+                        /  |      /  |                  /
+          1(-x,y,z)->  /_________/   |  <- (x,y,z)5    / z
+         2(-x,-y,-z)-> |   /-----|---/ <- (x,-y,-z)6
+                       |  /      |  /
+                       | /       | /
+          3(-x,-y,z)-> |/________|/ <- (x,-y,z)7
+
+                */
+
+                float vertices[] = {
+                        Point(from.x - width, from.y, from.z - width),
+                        Point(from.x - width, from.y, from.z + width),
+                        Point(to.x - width, to.y, to.z - width),
+                        Point(to.x - width, to.y, to.z + width),
+                        Point(from.x + width, from.y, from.z - width),
+                        Point(from.x + width, from.y, from.z + width),
+                        Point(to.x + width, to.y, to.z - width),
+                        Point(to.x + width, to.y, to.z + width),
                 };
 
                 GLuint indices[] = {

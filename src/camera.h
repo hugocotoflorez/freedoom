@@ -11,6 +11,7 @@
 using namespace glm;
 
 #include "mesh.h"
+#include "setShaders.h"
 
 /* Camera: set view points */
 class Camera
@@ -24,6 +25,7 @@ class Camera
         void *scene;
 
         void __recalculate_view();
+        void init_mesh();
 
     public:
         Camera(vec3 pos, vec3 _up = vec3(0.0f, 1.0f, 0.0f), vec3 _at = vec3(0.0f, 0.0f, 0.0f))
@@ -33,6 +35,7 @@ class Camera
           mesh(nullptr)
         {
                 __recalculate_view();
+                init_mesh();
         }
 
         ~Camera()
@@ -52,10 +55,10 @@ class Camera
         void transform(vec3 pos);
         vec3 get_position();
         mat4 get_view();
-        void draw();
         void set_camera(int shader);
         void set_scene(void *s);
         mat4 get_projection();
+        Mesh* get_mesh();
 
         /* Rotate around given axis */
         void axis_rotate(vec3);

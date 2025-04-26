@@ -1,6 +1,6 @@
 #include "mesh.h"
-#include "camera.h"
 #include "scene.h"
+#include "shape.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -8,15 +8,24 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 
-#define LOG_PRINT 0
-#include "../thirdparty/frog/frog.h"
-
 vec3
 SphereCollider::get_position()
 {
         return parent->get_absolute_position();
 }
 
+void
+SphereCollider::set_sphere(float r)
+{
+        sphere = Shape::sphere_collider(r);
+}
+
+void
+SphereCollider::draw(mat4 mat, int _do)
+{
+        // printf("Drawing sphere collider\n");
+        sphere->draw(mat, _do);
+}
 
 void
 Mesh::show()
@@ -42,6 +51,8 @@ Mesh::
 set_shader(GLuint shader)
 {
         __shader = shader;
+        if (sphere_collider && sphere_collider->is_pintable())
+                sphere_collider->get_sphere()->set_shader(shader);
         return *this;
 }
 
@@ -189,18 +200,12 @@ Mesh::add_texture(GLuint texture)
 }
 
 void
-Mesh::draw(mat4 _model)
+Mesh::draw(mat4 _model, int _do)
 {
         _model = _model * model;
 
-        // static bool already_print = false;
-        // if (!already_print) {
-        //         printf("Model: %s -- vao:%d, indexes:%d (shader:%d)\n", name, vao, indexes_n, __shader);
-        //         already_print = true;
-        // }
-
         for (Mesh *attached_mesh : attached) {
-                (*attached_mesh).draw(_model);
+                (*attached_mesh).draw(_model, _do);
         }
 
         if (!printable) return;
@@ -234,16 +239,23 @@ Mesh::draw(mat4 _model)
 
         glUniformMatrix4fv(glGetUniformLocation(__shader, "model"), 1, GL_FALSE, value_ptr(_model));
 
-        glBindVertexArray(vao);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+        if (_do & DRAW_FILL) {
+                glBindVertexArray(vao);
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+        }
 
         /* Print orange lines above filled faces */
-        glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0xFF4D00));
-        glBindVertexArray(vao);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+        if (_do & DRAW_LINE) {
+                glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(0xFF4D00));
+                glBindVertexArray(vao);
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
+        }
         /* ------------------------------ */
+
+        if (sphere_collider && sphere_collider->is_pintable())
+                sphere_collider->draw(_model);
 
         glBindVertexArray(0);
         // glBindTexture(GL_TEXTURE_2D, 0);
@@ -273,6 +285,8 @@ void
 Mesh::set_scene(void *s)
 {
         scene = s;
+        if (sphere_collider && sphere_collider->is_pintable())
+                sphere_collider->get_sphere()->set_scene(s);
 }
 
 void *

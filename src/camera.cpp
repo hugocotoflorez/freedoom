@@ -3,9 +3,10 @@
 
 #include <GLFW/glfw3.h>
 
+#include "shape.h"
+
 #include "camera.h"
 #include "mesh.h"
-#include "shape.h"
 
 #include "setShaders.h"
 
@@ -19,7 +20,6 @@ using namespace glm;
 
 extern GLuint width;
 extern GLuint height;
-
 
 void
 Camera::__recalculate_view()
@@ -36,6 +36,13 @@ Camera::look_at(vec3 pos)
         if (mesh)
                 mesh->look_at(pos);
 }
+
+Mesh *
+Camera::get_mesh()
+{
+        return mesh;
+}
+
 
 /* Place camera in POS. It is an absolute position. To move the camera in a relative
  * way use transform(). */
@@ -75,6 +82,7 @@ void
 Camera::set_scene(void *s)
 {
         scene = s;
+        mesh->set_scene(s);
 }
 
 void
@@ -87,6 +95,17 @@ Camera::axis_rotate(vec3 rotation)
 
         place(position);
         __recalculate_view();
+}
+
+void
+Camera::init_mesh()
+{
+        mesh = Shape::camera();
+        mesh->set_shader(setShaders("shaders/camera_vs.glsl", "shaders/camera_fs.glsl"));
+        mesh->set_color(0x404040);
+
+        mesh->translate(position);
+        mesh->look_at(looking_at);
 }
 
 mat4
@@ -104,23 +123,4 @@ Camera::set_camera(int shader)
 
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, value_ptr(projection));
-}
-
-/* Draw a camera-like object that represents the camera position and looking direction */
-void
-Camera::draw()
-{
-        if (mesh) {
-                mesh->draw();
-                return;
-        }
-
-        mesh = Shape::camera();
-        mesh->set_scene(scene);
-        mesh->set_shader(setShaders("shaders/camera_vs.glsl", "shaders/camera_fs.glsl"));
-        mesh->set_color(0x404040);
-
-        mesh->translate(position);
-        mesh->look_at(looking_at);
-        mesh->draw();
 }

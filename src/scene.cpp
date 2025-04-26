@@ -2,9 +2,11 @@
 #include "camera.h"
 #include "camview.h"
 #include "mesh.h"
+#include "shape.h"
+
 #include "setShaders.h"
 #include <cstdio>
-#include <iterator>
+#include <glm/geometric.hpp>
 
 
 #define LOG_PRINT 0
@@ -25,7 +27,9 @@ Scene::get_camera(int index)
 int
 IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
 {
-        if (sphere == nullptr) return 0;
+        if (sphere == nullptr) {
+                return 0;
+        }
 
         vec3 center = sphere->get_position();
         float radius = sphere->get_radius();
@@ -35,12 +39,16 @@ IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
         float c = dot(m, m) - radius * radius;
 
         // Salida temprana si el rayo parte fuera y se aleja de la esfera
-        if (c > 0.0f && b > 0.0f) return 0;
+        if (c > 0.0f && b > 0.0f) {
+                return 0;
+        }
 
         float discr = b * b - c;
 
         // Discriminante negativo → sin intersección
-        if (discr < 0.0f) return 0;
+        if (discr < 0.0f) {
+                return 0;
+        }
 
         // Se calcula el t más pequeño (entrada)
         float t_hit = -b - sqrt(discr);
@@ -51,6 +59,7 @@ IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
         // Resultado final
         t = t_hit;
         q = p + t * d;
+
         return 1;
 }
 
@@ -59,14 +68,21 @@ Mesh *
 Scene::get_raycast_collision(vec2 mouse)
 {
         Camera *camera = get_camera();
-        /* Si no funciona con view cambiar a transform */
-        mat4 toWorld = inverse(camera->get_projection() * camera->get_view());
 
-        vec4 from = toWorld * vec4(mouse, -1.0f, 1.0f);
-        vec4 to = toWorld * vec4(mouse, 1.0f, 1.0f);
+        // world_point = inverse(view) * inverse(projection) * mouse_point;
+
+        vec4 from = vec4(camera->get_position(), 1.0f);
+        vec4 to = inverse(camera->get_view()) * inverse(camera->get_projection()) * vec4(mouse, 1, 1);
 
         from /= from.w; // perspective divide ("normalize" homogeneous coordinates)
         to /= to.w;
+
+        /* Represent ray */
+        // Mesh *l = Shape::line(from, to);
+        // l->set_shader(meshes.at(0)->get_shader()); // TODO
+        // l->set_scene(this);
+        // meshes.push_back(l);
+
 
         int clickedObject = -1;
         float minDist = 10000.0f;
@@ -74,14 +90,21 @@ Scene::get_raycast_collision(vec2 mouse)
         for (size_t i = 0; i < meshes.size(); ++i) {
                 float t; // collision distance
                 vec3 q; // collision point
-                vec3 direction = vec3(to) - vec3(from);
-                if (IntersectRaySphere(vec3(to), direction, meshes.at(i)->get_sphere_collider(), t, q)) {
+                vec3 direction = normalize(vec3(to) - vec3(from));
+                if (IntersectRaySphere(camera->get_position(), direction, meshes.at(i)->get_sphere_collider(), t, q)) {
                         // object i has been clicked. probably best to find the minimum t1 (front-most object)
+
                         if (t < minDist) {
                                 minDist = t;
                                 clickedObject = (int) i;
-                                printf("Ray collide with: %s\n", meshes.at(i)->get_name());
                         }
+
+                        /* Represent collision point */
+                        Mesh *c = Shape::cube_nocollider(0.1f);
+                        c->set_shader(meshes.at(0)->get_shader()); // TODO
+                        c->set_scene(this);
+                        meshes.push_back(c);
+                        c->translate(q);
                 }
         }
 
@@ -112,6 +135,8 @@ int
 Scene::add_camera(Camera *c)
 {
         cameras.push_back(c);
+        if (c->get_mesh())
+                meshes.push_back(c->get_mesh());
         c->set_scene(this);
         return cameras.size() - 1;
 }
@@ -135,7 +160,6 @@ Scene::render()
                         int render_recursion = 1;
                         for (int i = 0; i < render_recursion; i++) {
                                 // m->hide();
-                                // printf("Render %s\n", m->get_name());
                                 ((CamView *) m)->render();
                                 // m->show();
                         }
@@ -147,9 +171,6 @@ Scene::draw()
 {
         for (auto m : meshes)
                 m->draw();
-
-        for (auto c : cameras)
-                c->draw();
 }
 
 void

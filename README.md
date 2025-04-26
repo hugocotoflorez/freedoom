@@ -1,4 +1,3 @@
 # freedoom
-
-## Startpoint
-[https://github.com/hugocotoflorez/grua2](https://github.com/hugocotoflorez/grua2) (oop version)
+[intersections](https://iquilezles.org/articles/intersectors/)
+[intersections2](https://www.realtimerendering.com/intersections.html)

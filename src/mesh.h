@@ -14,6 +14,12 @@
 using namespace glm;
 using namespace std;
 
+enum draw_opts {
+        DRAW_NONE,
+        DRAW_LINE,
+        DRAW_FILL,
+};
+
 class Mesh;
 
 class SphereCollider
@@ -21,20 +27,35 @@ class SphereCollider
     private:
         float radius;
         Mesh *parent;
+        Mesh *sphere; // representation of itself
 
     public:
-        SphereCollider(float radius, Mesh *parent)
-        : radius(0.0f),
-          parent(nullptr)
+        SphereCollider(float r, Mesh *p)
+        : radius(r),
+          parent(p),
+          sphere(nullptr)
         {
+                set_sphere(radius);
         }
 
+        void draw(mat4 mat, int _do = DRAW_LINE);
 
         float get_radius()
         {
                 return radius;
         }
 
+        bool is_pintable()
+        {
+                return sphere != nullptr;
+        }
+
+        Mesh *get_sphere()
+        {
+                return sphere;
+        }
+
+        void set_sphere(float r);
         vec3 get_position();
 };
 
@@ -63,7 +84,7 @@ class Mesh
         int dynamic_camera;
 
     public:
-        Mesh(const char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false)
+        Mesh(const char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false, bool has_collider = true)
         : need_render(render),
           name(name),
           vao(0),
@@ -80,7 +101,8 @@ class Mesh
           dynamic_camera(-1),
           sphere_collider(nullptr)
         {
-                new SphereCollider(1.0f, this);
+                if (has_collider)
+                        sphere_collider = new SphereCollider(0.7f, this);
         }
 
         void set_vao(GLuint _vao, GLuint _indexes_n);
@@ -104,7 +126,7 @@ class Mesh
         Mesh &translate(vec3 v);
         void look_at2d(vec3 view_pos);
         void look_at(vec3 view_pos);
-        void draw(mat4 _model = mat4(1.0f));
+        void draw(mat4 _model = mat4(1.0f), int _do = DRAW_LINE | DRAW_FILL);
         void attach(Mesh *child);
         void set_before_draw(Mesh *mesh, void (*func)(Mesh *));
         bool is_attached();
