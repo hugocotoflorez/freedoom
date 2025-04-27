@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "scene.h"
 #include "shape.h"
 
 #include "camera.h"
@@ -33,8 +34,10 @@ Camera::look_at(vec3 pos)
 {
         looking_at = pos;
         __recalculate_view();
-        if (mesh)
+        if (mesh) {
                 mesh->look_at(pos);
+                printf("Camera->mesh look_at\n");
+        }
 }
 
 Mesh *
@@ -52,8 +55,11 @@ Camera::place(vec3 pos)
         position = pos;
         __recalculate_view();
         if (mesh) {
-                mesh->set_model(mesh->get_rotation_matrix());
+                mat4 rot = mesh->get_rotation_matrix();
+                mesh->set_model(mat4(1.0f));
                 mesh->translate(pos);
+                mesh->set_model(rot * mesh->get_model());
+                printf("Camera->mesh place\n");
         }
 }
 
@@ -62,8 +68,10 @@ Camera::transform(vec3 pos)
 {
         position += pos;
         __recalculate_view();
-        if (mesh)
+        if (mesh) {
                 mesh->translate(pos);
+                printf("Camera->mesh transform\n");
+        }
 }
 
 vec3
@@ -82,7 +90,8 @@ void
 Camera::set_scene(void *s)
 {
         scene = s;
-        mesh->set_scene(s);
+        if (mesh)
+                mesh->set_scene(s);
 }
 
 void
@@ -106,6 +115,7 @@ Camera::init_mesh()
 
         mesh->translate(position);
         mesh->look_at(looking_at);
+        mesh->attach_camera(this);
 }
 
 mat4

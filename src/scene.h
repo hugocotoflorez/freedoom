@@ -95,6 +95,7 @@ class Scene
                 for (int i = 0; i < cameras.size(); i++) {
                         if (c == cameras.at(i)) {
                                 set_camera(i);
+                                return;
                         }
                 }
         }
@@ -110,6 +111,12 @@ extern vec2 get_window_size();
 static void
 cam_movement_input_handler(GLFWwindow *window, Scene *scene)
 {
+        /* Esto no deberia ir aqui */
+        if (glfwRawMouseMotionSupported())
+                glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+
         static bool initialized = false;
         static float xprev, yprev;
         double _xpos, _ypos;

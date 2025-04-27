@@ -3,6 +3,7 @@
 
 #include "camera.h"
 #include "mesh.h"
+#include <cassert>
 
 static void _before(Mesh *self);
 

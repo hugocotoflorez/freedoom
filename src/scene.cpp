@@ -34,6 +34,9 @@ IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
         vec3 center = sphere->get_position();
         float radius = sphere->get_radius();
 
+        if (radius <= 0)
+                return 0;
+
         vec3 m = p - center;
         float b = dot(m, d);
         float c = dot(m, m) - radius * radius;
@@ -86,6 +89,7 @@ Scene::get_raycast_collision(vec2 mouse)
 
         int clickedObject = -1;
         float minDist = 10000.0f;
+        vec3 _q; // collision point
 
         for (size_t i = 0; i < meshes.size(); ++i) {
                 float t; // collision distance
@@ -96,21 +100,23 @@ Scene::get_raycast_collision(vec2 mouse)
 
                         if (t < minDist) {
                                 minDist = t;
+                                _q = q;
                                 clickedObject = (int) i;
                         }
-
-                        /* Represent collision point */
-                        Mesh *c = Shape::cube_nocollider(0.1f);
-                        c->set_shader(meshes.at(0)->get_shader()); // TODO
-                        c->set_scene(this);
-                        meshes.push_back(c);
-                        c->translate(q);
                 }
         }
 
         if (clickedObject >= 0) {
                 printf("Click on %s\n", meshes.at(clickedObject)->get_name());
                 meshes.at(clickedObject)->get_sphere_collider()->on_collision();
+
+                /* Represent collision point */
+                Mesh *c = Shape::cube_nocollider(0.1f);
+                c->set_shader(meshes.at(0)->get_shader()); // TODO
+                c->set_scene(this);
+                meshes.push_back(c);
+                c->translate(_q);
+
                 return meshes.at(clickedObject);
         }
 
@@ -141,16 +147,17 @@ Scene::set_camera(GLuint index)
 int
 Scene::add_camera(Camera *c)
 {
+        printf("Add camera to scene\n");
         cameras.push_back(c);
         if (c->get_mesh())
-                meshes.push_back(c->get_mesh());
-        c->set_scene(this);
+                add_mesh(c->get_mesh());
         return cameras.size() - 1;
 }
 
 void
 Scene::add_mesh(Mesh *m)
 {
+        printf("Add mesh %s to scene\n", m->get_name());
         m->set_scene(this);
         meshes.push_back(m);
 }
@@ -176,8 +183,11 @@ Scene::render()
 void
 Scene::draw()
 {
-        for (auto m : meshes)
+        printf("Drawing %ld meshes:\n", meshes.size());
+        for (auto m : meshes) {
+                printf("  - %s\n", m->get_name());
                 m->draw();
+        }
 }
 
 void

@@ -10,7 +10,7 @@
 #define MOUSE_SENS_X 2.0f
 #define MOUSE_SENS_Y 2.0f
 #define MOUSE_FIRST_PERSON_SENS_X 2.0f
-#define MOUSE_FIRST_PERSON_SENS_Y 2.0f
+#define MOUSE_FIRST_PERSON_SENS_Y 4.0f
 #define MOUSE_REDUCTION 0.001f
 
 /* Show fps if SHOW_FPS is defined and not 0 */

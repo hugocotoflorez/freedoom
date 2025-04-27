@@ -34,12 +34,14 @@ class SphereCollider
         float radius;
         Mesh *parent;
         Mesh *sphere; // representation of itself
+        bool active;
         vector<on_collide_func> on_collide;
 
     public:
         SphereCollider(float r, Mesh *p)
         : radius(r),
           parent(p),
+          active(true),
           sphere(nullptr)
         {
                 set_sphere(radius);
@@ -49,17 +51,26 @@ class SphereCollider
 
         float get_radius()
         {
-                return radius;
+                if (active)
+                        return radius;
+                return 0;
         }
 
         bool is_pintable()
         {
-                return sphere != nullptr;
+                return sphere != nullptr && active;
         }
 
         Mesh *get_sphere()
         {
-                return sphere;
+                if (active)
+                        return sphere;
+                return nullptr;
+        }
+
+        void set_active(bool a)
+        {
+                active = a;
         }
 
         void set_on_collide(void (*_on_collide)(SphereCollider *))
@@ -69,6 +80,9 @@ class SphereCollider
 
         void on_collision()
         {
+                if (active == false)
+                        return;
+
                 if (on_collide.size() > 0)
                         for (auto func : on_collide)
                                 func(this);
@@ -106,6 +120,7 @@ class Mesh
         void (*input_handler)(GLFWwindow *);
         vector<void (*)(Mesh *)> on_selected;
         vector<void (*)(Mesh *)> on_deselected;
+        void *attached_camera;
 
     protected:
         void *scene;
@@ -129,7 +144,8 @@ class Mesh
           dynamic_camera(-1),
           sphere_collider(nullptr),
           is_selected(false),
-          input_handler(nullptr)
+          input_handler(nullptr),
+          attached_camera(nullptr)
         {
                 if (has_collider)
                         sphere_collider = new SphereCollider(0.7f, this);
@@ -138,7 +154,7 @@ class Mesh
         void set_vao(GLuint _vao, GLuint _indexes_n);
         void show();
         void hide();
-        Mesh &set_shader(GLuint shader);
+        void set_shader(GLuint shader);
         const char *get_name();
         vec3 get_position();
         mat4 get_absolute_model();
@@ -149,11 +165,11 @@ class Mesh
         vec3 get_rotation();
         mat3 get_default_rotation_matrix();
         mat4 get_model();
-        Mesh &set_model(mat4 _model);
-        Mesh &set_before_draw_function(void (*_before_draw)(Mesh *));
+        void set_model(mat4 _model);
+        void set_before_draw_function(void (*_before_draw)(Mesh *));
         unsigned int get_shader();
-        Mesh &rotate(float angle, vec3 v);
-        Mesh &translate(vec3 v);
+        void rotate(float angle, vec3 v);
+        void translate(vec3 v);
         void look_at2d(vec3 view_pos);
         void look_at(vec3 view_pos);
         void draw(mat4 _model = mat4(1.0f), int _do = DRAW_LINE | DRAW_FILL);
@@ -195,6 +211,16 @@ class Mesh
                 on_deselected.push_back(func);
         }
 
+        void *get_attached_camera()
+        {
+                return attached_camera;
+        }
+
+        void attach_camera(void *c)
+        {
+                attached_camera = c;
+        }
+
         void set_input_handler(void (*_input_handler)(GLFWwindow *))
         {
                 input_handler = _input_handler;
@@ -203,6 +229,18 @@ class Mesh
         void (*get_input_handler())(GLFWwindow *)
         {
                 return input_handler;
+        }
+
+        void enable_sphere_collider()
+        {
+                if (sphere_collider)
+                        sphere_collider->set_active(true);
+        }
+
+        void disable_sphere_collider()
+        {
+                if (sphere_collider)
+                        sphere_collider->set_active(false);
         }
 };
 

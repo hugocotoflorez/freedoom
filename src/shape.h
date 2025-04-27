@@ -75,7 +75,7 @@ class Shape
         {
                 Actor *m = new Actor("Actor");
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, l/2, l, l/2);
+                __cube(&vao, &indexes_n, l / 2, l, l / 2);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -470,11 +470,11 @@ class Shape
                         Face4(1, 3, 7, 5), // front
                         Face4(0, 4, 6, 2), // back
                         Face4(3, 2, 6, 7), // down
-                        Face4(10, 11, 12, 9), // camera front
-                        Face3(8, 10, 9),
-                        Face3(8, 11, 10),
-                        Face3(8, 12, 11),
-                        Face3(8, 9, 12),
+                        Face4(10, 9, 12, 11), // camera front
+                        Face3(8, 9, 10),
+                        Face3(8, 10, 11),
+                        Face3(11, 12, 8),
+                        Face3(9, 8, 12),
                 };
 
                 *indexes_n = SIZE(indices);

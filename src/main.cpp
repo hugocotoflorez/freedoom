@@ -149,11 +149,6 @@ main()
         glfwSwapInterval(VSYNC);
 #endif
 
-        /* Mouse stuff */
-        if (glfwRawMouseMotionSupported())
-                glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
 
         glClearColor(color4split(BG_COLOR));
         glClearDepth(1.0f);

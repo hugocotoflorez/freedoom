@@ -1,12 +1,14 @@
-#include "mesh.h"
 #include "scene.h"
 #include "shape.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+
+constexpr bool draw_collision_sphere = true;
 
 vec3
 SphereCollider::get_position()
@@ -23,8 +25,9 @@ SphereCollider::set_sphere(float r)
 void
 SphereCollider::draw(mat4 mat, int _do)
 {
-        // printf("Drawing sphere collider\n");
-        sphere->draw(mat, _do);
+        if (active)
+                // printf("Drawing sphere collider\n");
+                sphere->draw(mat, _do);
 }
 
 void
@@ -46,14 +49,12 @@ Mesh::set_vao(GLuint _vao, GLuint _indexes_n)
         indexes_n = _indexes_n;
 }
 
-Mesh &
-Mesh::
-set_shader(GLuint shader)
+void
+Mesh::set_shader(GLuint shader)
 {
         __shader = shader;
         if (sphere_collider && sphere_collider->is_pintable())
                 sphere_collider->get_sphere()->set_shader(shader);
-        return *this;
 }
 
 const char *
@@ -123,20 +124,18 @@ Mesh::get_model()
         return model;
 }
 
-Mesh &
+void
 Mesh::
 set_model(mat4 _model)
 {
         model = _model;
-        return *this;
 }
 
-Mesh &
+void
 Mesh::
 set_before_draw_function(void (*_before_draw)(Mesh *))
 {
         before_draw = _before_draw;
-        return *this;
 }
 
 void
@@ -152,20 +151,17 @@ get_shader()
         return __shader;
 }
 
-Mesh &
+void
 Mesh::
 rotate(float angle, vec3 v)
 {
         model = glm::rotate(model, angle, v);
-        return *this;
 }
 
-Mesh &
-Mesh::
-translate(vec3 v)
+void
+Mesh::translate(vec3 v)
 {
         model = glm::translate(model, v);
-        return *this;
 }
 
 void
@@ -185,12 +181,11 @@ Mesh::look_at2d(vec3 view_pos)
 void
 Mesh::look_at(vec3 view_pos)
 {
-        vec3 mesh_pos = get_position();
-        vec3 dir = normalize(view_pos - mesh_pos);
-        vec3 up = vec3(0.0f, 1.0f, 0.0f); // Vector 'up' del mundo
-        mat4 rotation = glm::inverse(glm::lookAt(mesh_pos, view_pos, up));
-        mat4 translation = glm::translate(mat4(1.0f), mesh_pos);
-        model = translation * rotation;
+        mat4 mesh_model = get_absolute_model();
+        vec3 relpos = get_position();
+        vec3 up = mesh_model[1];
+        model = glm::translate(mat4(1.0f), relpos);
+        model = model * inverse(lookAt(get_absolute_position(), view_pos, up));
 }
 
 void
@@ -205,11 +200,14 @@ Mesh::draw(mat4 _model, int _do)
         _model = _model * model;
 
         for (Mesh *attached_mesh : attached) {
+                printf("attached draw: %s attach to %s\n", attached_mesh->get_name(), get_name());
                 (*attached_mesh).draw(_model, _do);
         }
 
         if (!printable) return;
         if (before_draw) before_draw(this);
+
+        printf("Drawing: %s\n", get_name());
 
         glUseProgram(__shader);
 
@@ -264,11 +262,11 @@ Mesh::draw(mat4 _model, int _do)
                 glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
         }
 
-        if (sphere_collider && sphere_collider->is_pintable() && false)
+        if (sphere_collider && sphere_collider->is_pintable() && draw_collision_sphere)
                 sphere_collider->draw(_model);
 
         glBindVertexArray(0);
-        // glBindTexture(GL_TEXTURE_2D, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void
