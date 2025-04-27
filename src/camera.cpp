@@ -35,8 +35,7 @@ Camera::look_at(vec3 pos)
         looking_at = pos;
         __recalculate_view();
         if (mesh) {
-                mesh->look_at(pos);
-                printf("Camera->mesh look_at\n");
+                mesh->look_at(looking_at);
         }
 }
 
@@ -46,7 +45,6 @@ Camera::get_mesh()
         return mesh;
 }
 
-
 /* Place camera in POS. It is an absolute position. To move the camera in a relative
  * way use transform(). */
 void
@@ -55,11 +53,8 @@ Camera::place(vec3 pos)
         position = pos;
         __recalculate_view();
         if (mesh) {
-                mat4 rot = mesh->get_rotation_matrix();
-                mesh->set_model(mat4(1.0f));
-                mesh->translate(pos);
-                mesh->set_model(rot * mesh->get_model());
-                printf("Camera->mesh place\n");
+                mesh->place(pos);
+                mesh->look_at(looking_at);
         }
 }
 
@@ -67,10 +62,8 @@ void
 Camera::transform(vec3 pos)
 {
         position += pos;
-        __recalculate_view();
         if (mesh) {
-                mesh->translate(pos);
-                printf("Camera->mesh transform\n");
+                mesh->place(position);
         }
 }
 
@@ -101,8 +94,8 @@ Camera::axis_rotate(vec3 rotation)
         model = rotate(model, rotation.x, vec3(0.0f, 1.0f, 0.0f));
         position = vec3(model * vec4(position, 0));
         position.y += rotation.y;
-
         place(position);
+
         __recalculate_view();
 }
 
@@ -112,10 +105,10 @@ Camera::init_mesh()
         mesh = Shape::camera();
         mesh->set_shader(setShaders("shaders/camera_vs.glsl", "shaders/camera_fs.glsl"));
         mesh->set_color(0x404040);
+        mesh->attach_camera(this);
 
         mesh->translate(position);
         mesh->look_at(looking_at);
-        mesh->attach_camera(this);
 }
 
 mat4
@@ -131,6 +124,7 @@ Camera::set_camera(int shader)
         GLuint projectionLoc = glGetUniformLocation(shader, "projection");
         mat4 projection = get_projection();
 
+        __recalculate_view();
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, value_ptr(projection));
 }

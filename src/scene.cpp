@@ -127,7 +127,8 @@ void
 Scene::set_on_collision(void (*_on_collide)(SphereCollider *))
 {
         for (auto m : meshes) {
-                m->get_sphere_collider()->set_on_collide(_on_collide);
+                if (m->get_sphere_collider())
+                        m->get_sphere_collider()->set_on_collide(_on_collide);
         }
 }
 
@@ -140,14 +141,22 @@ Scene::get_camera_id()
 void
 Scene::set_camera(GLuint index)
 {
-        if (index < cameras.size())
+        Camera *c = cameras.at(camera_index);
+        c->get_mesh()->show();
+        c->get_mesh()->enable_sphere_collider();
+
+        if (index < cameras.size()) {
                 camera_index = index;
+        }
+
+        c = cameras.at(camera_index);
+        c->get_mesh()->hide();
+        c->get_mesh()->disable_sphere_collider();
 }
 
 int
 Scene::add_camera(Camera *c)
 {
-        printf("Add camera to scene\n");
         cameras.push_back(c);
         if (c->get_mesh())
                 add_mesh(c->get_mesh());
@@ -157,7 +166,6 @@ Scene::add_camera(Camera *c)
 void
 Scene::add_mesh(Mesh *m)
 {
-        printf("Add mesh %s to scene\n", m->get_name());
         m->set_scene(this);
         meshes.push_back(m);
 }
@@ -183,9 +191,7 @@ Scene::render()
 void
 Scene::draw()
 {
-        printf("Drawing %ld meshes:\n", meshes.size());
         for (auto m : meshes) {
-                printf("  - %s\n", m->get_name());
                 m->draw();
         }
 }

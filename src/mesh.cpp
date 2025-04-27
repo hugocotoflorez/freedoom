@@ -1,3 +1,4 @@
+#include "camera.h"
 #include "scene.h"
 #include "shape.h"
 #include <cstddef>
@@ -159,6 +160,23 @@ rotate(float angle, vec3 v)
 }
 
 void
+Mesh::place(vec3 v)
+{
+        mat4 m = get_model();
+        m[3] = vec4(v, 1.0f);
+        set_model(m);
+}
+
+void
+Mesh::move(vec3 v)
+{
+        vec3 pos = get_position() + v;
+        mat4 m = get_model();
+        m[3] = vec4(pos, 1.0f);
+        set_model(m);
+}
+
+void
 Mesh::translate(vec3 v)
 {
         model = glm::translate(model, v);
@@ -182,10 +200,10 @@ void
 Mesh::look_at(vec3 view_pos)
 {
         mat4 mesh_model = get_absolute_model();
-        vec3 relpos = get_position();
+        vec3 pos = get_position();
         vec3 up = mesh_model[1];
-        model = glm::translate(mat4(1.0f), relpos);
-        model = model * inverse(lookAt(get_absolute_position(), view_pos, up));
+        model = inverse(lookAt(get_absolute_position(), view_pos, up));
+        place(pos);
 }
 
 void
@@ -204,10 +222,13 @@ Mesh::draw(mat4 _model, int _do)
                 (*attached_mesh).draw(_model, _do);
         }
 
-        if (!printable) return;
-        if (before_draw) before_draw(this);
+        if (sphere_collider && sphere_collider->is_pintable() && draw_collision_sphere)
+                sphere_collider->draw(_model);
 
-        printf("Drawing: %s\n", get_name());
+        if (!printable) return;
+
+        glEnable(GL_DEPTH_TEST);
+        if (before_draw) before_draw(this);
 
         glUseProgram(__shader);
 
@@ -218,8 +239,8 @@ Mesh::draw(mat4 _model, int _do)
         glUniform1i(glGetUniformLocation(__shader, "texture_count"), textures.size());
         for (size_t i = 0; i < textures.size(); ++i) {
                 GLuint texture = textures.at(i);
-                // printf("Using texture %d/%ld for mesh %s\n", texture, textures.size(), get_name());
                 if (glIsTexture(texture)) {
+                        //printf("Using texture %d for model %s\n", texture, get_name());
                         glActiveTexture(GL_TEXTURE0 + i);
                         textureLoc = glGetUniformLocation(__shader, ("textures[" + std::to_string(i) + "]").c_str());
                         glUniform1i(textureLoc, i);
@@ -261,9 +282,6 @@ Mesh::draw(mat4 _model, int _do)
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 glDrawElements(GL_TRIANGLES, indexes_n, GL_UNSIGNED_INT, 0);
         }
-
-        if (sphere_collider && sphere_collider->is_pintable() && draw_collision_sphere)
-                sphere_collider->draw(_model);
 
         glBindVertexArray(0);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -325,4 +343,47 @@ void
 Mesh::init()
 {
         default_model = model;
+}
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+void
+Mesh::add_texture_image(const char *path, int how)
+{
+        int height, width, comp;
+        unsigned char *image;
+        unsigned int texture;
+
+        stbi_set_flip_vertically_on_load(1);
+        image = stbi_load(path, &width, &height, &comp, STBI_rgb_alpha);
+
+        if (image == NULL) {
+                fprintf(stderr, "Failed to load texture '%s'\n", path);
+                exit(0);
+        }
+
+        if (image == NULL) {
+                printf("[ERROR] Material has no image data!\n");
+                return;
+        }
+
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, how ?: GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, how ?: GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        assert(width > 0 && height > 0);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        assert(texture > 0);
+        textures.push_back(texture);
+        stbi_image_free(image);
 }

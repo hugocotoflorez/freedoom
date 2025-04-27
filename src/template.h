@@ -6,6 +6,7 @@
 #include "shape.h"
 
 #include "setShaders.h"
+#include <cassert>
 #include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
@@ -31,29 +32,32 @@ enable_collision_sphere(Mesh *m)
 #include <cmath>
 #include <iostream>
 
-bool
-calcular_x2(double x1, double y1, double y2, double &x2)
+static bool
+calc_x2(float x1, float y1, float y2, float &x2)
 {
-        double value = x1 * x1 + y1 * y1 - y2 * y2;
+        float value = x1 * x1 + y1 * y1 - y2 * y2;
 
         if (value < 0) {
                 return false;
         }
 
-        x2 = fabsl(sqrt(x1 * x1 + y1 * y1 - y2 * y2));
+        x2 = fabsl(sqrt(value));
         return true;
 }
 
 extern double *interframe_time();
+extern int mouse_mode;
 
 static void
 __1person_handler(GLFWwindow *window, Scene *scene)
 {
         /* Esto no deberia ir aqui */
-        if (glfwRawMouseMotionSupported())
-                glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+        if (mouse_mode != GLFW_CURSOR_DISABLED) {
+                mouse_mode = GLFW_CURSOR_DISABLED;
+                if (glfwRawMouseMotionSupported())
+                        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
 
         static bool initialized = false;
         static float xprev, yprev;
@@ -80,9 +84,7 @@ __1person_handler(GLFWwindow *window, Scene *scene)
         float Y = actor->get_camera_yoffset();
         float J = yoffset * MOUSE_SENS_Y * MOUSE_REDUCTION * MOUSE_FIRST_PERSON_SENS_Y;
         float I;
-        double x2_pos, x2_neg;
-        if (calcular_x2(X, Y, Y + J, x2_pos)) {
-                I = x2_pos;
+        if (calc_x2(X, Y, Y + J, I)) {
                 actor->set_camera_yoffset(Y + J);
                 actor->set_camera_xoffset(I);
         } else {
@@ -142,10 +144,7 @@ __1person_handler(GLFWwindow *window, Scene *scene)
         // printf("Movement: (%2.2f,%2.2f,%2.2f)\n", movement.x, movement.y, movement.z);
 
         // Aplicar movimiento en espacio mundial
-        vec3 newPos = actor->get_position() + movement;
-        mat4 newModel = actor->get_model();
-        newModel[3] = vec4(newPos, 1.0f);
-        actor->set_model(newModel);
+        actor->move(movement);
 }
 
 static void
@@ -175,6 +174,12 @@ change_controls_default(Mesh *mesh)
         scene->set_handler(scene->get_default_handler());
         scene->set_camera((GLuint) 0);
         printf("Change handler -> default_handler\n");
+}
+
+static void
+disable_depth(Mesh *)
+{
+        glDisable(GL_DEPTH_TEST);
 }
 
 static void
@@ -217,9 +222,15 @@ class Template
                 Camera *c4 = new Camera(vec3(-2.0f, 2.0f, 0.0f));
                 Camera *ac = new Camera(vec3(0.0f, 0.0f, 0.0f));
                 Actor *a = Shape::actor(1.0f);
+                Mesh *crosshair = Shape::crosshair(0);
 
                 cube->translate(vec3(0.0f, 0.7f, 0.0f));
                 plane->set_color(0xAADD00);
+
+                // crosshair->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
+                // crosshair->set_color(0xABC000);
+                crosshair->disable_sphere_collider();
+                crosshair->set_before_draw_function(disable_depth);
 
                 camviewer->config();
                 camviewer->translate(vec3(-3.5f, 2.0f, -5.0f));
@@ -247,14 +258,13 @@ class Template
                 s->add_actor(a);
                 a->set_on_select(change_controls_1person);
                 a->set_on_deselect(change_controls_default);
-                a->set_on_select(disable_collision_sphere);
-                a->set_on_deselect(enable_collision_sphere);
-
 
                 c->get_mesh()->set_on_select(__select_camera);
                 c2->get_mesh()->set_on_select(__select_camera);
                 c3->get_mesh()->set_on_select(__select_camera);
                 c4->get_mesh()->set_on_select(__select_camera);
+
+                // crosshair->add_texture_image("textures/crosshair.png");
 
                 int cam_id;
                 cam_id = s->add_camera(c);
@@ -269,12 +279,22 @@ class Template
 
                 s->set_on_collision(__unselect_all);
                 s->set_on_collision(__select_obj);
+                s->set_on_select(disable_collision_sphere);
+                s->set_on_deselect(enable_collision_sphere);
                 s->use_shader("shaders/simple_vs.glsl", "shaders/simple_fs.glsl");
 
-                int shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
+                s->add_mesh(crosshair);
+
+                int shader_program;
+                shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
+                assert(shader_program>0);
                 camviewer->set_shader(shader_program);
                 camviewer2->set_shader(shader_program);
                 camviewer3->set_shader(shader_program);
+
+                shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
+                assert(shader_program>0);
+                crosshair->set_shader(shader_program);
 
                 return s;
         }

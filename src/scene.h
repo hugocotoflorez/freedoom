@@ -100,6 +100,18 @@ class Scene
                 }
         }
 
+        void set_on_select(void (*func)(Mesh *))
+        {
+                for (auto m : meshes)
+                        m->set_on_select(func);
+        }
+
+        void set_on_deselect(void (*func)(Mesh *))
+        {
+                for (auto m : meshes)
+                        m->set_on_deselect(func);
+        }
+
         void set_camera(GLuint);
 };
 
@@ -107,15 +119,19 @@ class Scene
  * to handle all this stuff but there isnt. */
 extern double *interframe_time();
 extern vec2 get_window_size();
+static int mouse_mode = -1;
 
 static void
 cam_movement_input_handler(GLFWwindow *window, Scene *scene)
 {
         /* Esto no deberia ir aqui */
-        if (glfwRawMouseMotionSupported())
-                glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+        if (mouse_mode != GLFW_CURSOR_CAPTURED) {
+                mouse_mode = GLFW_CURSOR_CAPTURED;
+                if (glfwRawMouseMotionSupported())
+                        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+                // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+        }
 
         static bool initialized = false;
         static float xprev, yprev;

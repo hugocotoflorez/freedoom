@@ -151,6 +151,7 @@ class Mesh
                         sphere_collider = new SphereCollider(0.7f, this);
         }
 
+        void move(vec3 v);
         void set_vao(GLuint _vao, GLuint _indexes_n);
         void show();
         void hide();
@@ -211,6 +212,8 @@ class Mesh
                 on_deselected.push_back(func);
         }
 
+        void place(vec3 v);
+
         void *get_attached_camera()
         {
                 return attached_camera;
@@ -242,6 +245,8 @@ class Mesh
                 if (sphere_collider)
                         sphere_collider->set_active(false);
         }
+
+        void add_texture_image(const char *path, int how = 0);
 };
 
 #endif

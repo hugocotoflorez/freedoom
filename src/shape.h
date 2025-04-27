@@ -35,6 +35,15 @@ class Shape
         {
         }
 
+        static Mesh *crosshair(float l)
+        {
+                Mesh *m = new Mesh("crosshair");
+                GLuint vao, indexes_n;
+                __crosshair_square(&vao, &indexes_n);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
         static Mesh *plane(float l)
         {
                 Mesh *m = new Mesh("plane");
@@ -214,6 +223,38 @@ class Shape
                 opts.use_normal = false;
 
                 __gen_vao(VAO, vertices.size(), vertices.data(), indices.size(), indices.data(), opts);
+        }
+
+        static void
+        __crosshair_square(GLuint *VAO, GLuint *indexes_n)
+        {
+                float size = 0.2f; // Tamaño bien grande (ajústalo después)
+                float _x = size / 2.0f;
+
+                float vertices[] = {
+                        Point(-_x, _x, 0.0f), Texture(0, 1),
+                        Point(-_x, -_x, 0.0f), Texture(0, 0),
+                        Point(_x, -_x, 0.0f), Texture(1, 0),
+                        Point(_x, _x, 0.0f), Texture(1, 1),
+                };
+
+                unsigned int indices[] = {
+                        Face4(0, 1, 2, 3)
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.texture_start = 3;
+                opts.texture_coords = 2;
+                opts.padd = 5;
+                opts.use_vertex = true;
+                opts.use_texture = true;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
         }
 
 
