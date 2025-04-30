@@ -11,15 +11,16 @@ class Actor : public Mesh
 {
     private:
         Camera *camera;
-        float camera_offset_x = 5.0f;
-        float camera_offset_y = 5.0f;
+        float camera_offset_x;
+        float camera_offset_y;
+        bool jumping = false;
 
     public:
         Actor(const char *name)
         : Mesh(name, 0x93ECFB),
           camera(nullptr),
-          camera_offset_x(5.0f),
-          camera_offset_y(5.0f)
+          camera_offset_x(2.0f),
+          camera_offset_y(1.0f)
         {
                 set_before_draw_function(_before);
         }
@@ -27,6 +28,21 @@ class Actor : public Mesh
         void set_camera_yoffset(float y)
         {
                 camera_offset_y = y;
+        }
+
+        bool is_bottom_colliding()
+        {
+                return get_absolute_position().y <= 1.5f;
+        }
+
+        void set_jumping(bool j)
+        {
+                jumping = j;
+        }
+
+        bool is_jumping()
+        {
+                return jumping;
         }
 
         float get_camera_yoffset()
@@ -57,8 +73,9 @@ class Actor : public Mesh
                 mat4 m = get_absolute_model();
                 vec3 pos = get_absolute_position();
                 vec3 dirf = normalize(vec3(m[2]));
-                camera->look_at(pos);
-                camera->place(pos + dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
+                vec3 right = normalize(vec3(m[0])) * 0.4f;
+                camera->look_at(pos + right);
+                camera->place(pos + right +  dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
                 camera->set_up(vec3(m[1]));
         }
 

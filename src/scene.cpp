@@ -107,7 +107,7 @@ Scene::get_raycast_collision(vec2 mouse)
         }
 
         if (clickedObject >= 0) {
-                printf("Click on %s\n", meshes.at(clickedObject)->get_name());
+                // printf("Click on %s\n", meshes.at(clickedObject)->get_name());
                 meshes.at(clickedObject)->get_sphere_collider()->on_collision();
 
                 /* Represent collision point */
@@ -179,7 +179,7 @@ Scene::render()
                         /* No se si render recursion funciona asi. La idea es que se
                          * vea un camview a traves del otro pero solo RENDER_RECURSION
                          * saltos. Si se activa hide - show entonces no aparece nunca. */
-                        int render_recursion = 1;
+                        int render_recursion = 10;
                         for (int i = 0; i < render_recursion; i++) {
                                 // m->hide();
                                 ((CamView *) m)->render();
@@ -191,6 +191,8 @@ Scene::render()
 void
 Scene::draw()
 {
+        if (skybox)
+                skybox->draw();
         for (auto m : meshes) {
                 m->draw();
         }

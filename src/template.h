@@ -8,6 +8,7 @@
 #include "setShaders.h"
 #include <cassert>
 #include <cmath>
+#include <cstdlib>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 #include <utility>
@@ -16,6 +17,7 @@
 #define PI 3.1416f
 
 #include <GLFW/glfw3.h>
+
 
 static void
 disable_collision_sphere(Mesh *m)
@@ -47,6 +49,7 @@ calc_x2(float x1, float y1, float y2, float &x2)
 
 extern double *interframe_time();
 extern int mouse_mode;
+Mesh *crosshair;
 
 static void
 __1person_handler(GLFWwindow *window, Scene *scene)
@@ -88,7 +91,7 @@ __1person_handler(GLFWwindow *window, Scene *scene)
                 actor->set_camera_yoffset(Y + J);
                 actor->set_camera_xoffset(I);
         } else {
-                printf("No existe solucion para x2\n");
+                // printf("No existe solucion para x2\n");
         }
 
 
@@ -114,43 +117,66 @@ __1person_handler(GLFWwindow *window, Scene *scene)
                 scene->next_camera();
         }
 
+#define SPEED 5.0f
+#define T static_cast<float>(*interframe_time())
+
+
         mat4 m = actor->get_absolute_model();
-        vec3 dirf = -normalize(vec3(m[2])); // frente (hacia -Z)
-        vec3 right = normalize(vec3(m[0])); // derecha (hacia +X)
+        vec3 dirf = -normalize(vec3(m[2])) * SPEED;
+        vec3 right = normalize(vec3(m[0])) * SPEED;
+        vec3 up = normalize(vec3(m[1])) * SPEED;
         vec3 posi = actor->get_position();
 
-        // printf("Pos: (%2.2f,%2.2f,%2.2f) Dirf: (%2.2f,%2.2f,%2.2f) Dirr (%2.2f,%2.2f,%2.2f)\n",
-        // posi.x, posi.y, posi.z, dirf.x, dirf.y, dirf.z, right.x, right.y, right.z);
+        static vec3 movement = vec3(0.0f);
+        static vec3 current_speed = vec3(0.0f);
+        current_speed -= current_speed * T * 100.0f;
 
-        vec3 movement = vec3(0);
-
-        // Movimiento
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                movement += dirf;
+                current_speed += dirf;
 
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                movement -= dirf;
+                current_speed -= dirf;
 
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                movement -= right;
+                current_speed -= right;
 
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                movement += right;
+                current_speed += right;
 
-        // Escalar movimiento
-        double speed = 2.0f;
-        movement *= (*interframe_time() * speed);
+#define JUMP_SPEED 6.0f
+#define G 9.8f
+        static float jumping_cumt = 0;
+        static bool sp_lock = false;
 
-        // printf("Movement: (%2.2f,%2.2f,%2.2f)\n", movement.x, movement.y, movement.z);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !sp_lock && actor->is_bottom_colliding()) {
+                scene->get_actor()->set_jumping(true);
+                jumping_cumt = T;
+                current_speed += up * (JUMP_SPEED - G * jumping_cumt);
+                sp_lock = true;
+        }
 
-        // Aplicar movimiento en espacio mundial
+        else if (actor->is_jumping() && !actor->is_bottom_colliding()) {
+                jumping_cumt += T;
+                current_speed += up * (JUMP_SPEED - G * jumping_cumt);
+        }
+
+        movement = (current_speed * T);
         actor->move(movement);
+
+        if (actor->is_bottom_colliding()) {
+                vec3 pos = actor->get_absolute_position();
+                actor->place(vec3(pos.x, 1.5f, pos.z));
+                actor->set_jumping(false);
+                current_speed.y = 0;
+                sp_lock = false;
+                jumping_cumt = 0;
+        }
 }
 
 static void
 __select_obj(SphereCollider *c)
 {
-        printf("Selecting %s\n", c->get_parent()->get_name());
+        // printf("Selecting %s\n", c->get_parent()->get_name());
         c->get_parent()->select();
 }
 
@@ -163,17 +189,33 @@ __unselect_all(SphereCollider *c)
 static void
 __select_camera(Mesh *m)
 {
-        printf("Calling __select_camera\n");
+        // printf("Calling __select_camera\n");
         ((Scene *) m->get_scene())->set_camera((Camera *) m->get_attached_camera());
+}
+
+static void
+__move(Mesh *m)
+{
+        static vec3 position = m->get_position();
+        static bool init = false;
+        if (!init)
+                srand(time(NULL));
+        int y = rand() % 5 - 2;
+        int x = rand() % 5 - 2;
+        m->place(vec3(position.x, position.y + y, position.z + x));
+        m->enable_sphere_collider();
+        m->deselect();
 }
 
 static void
 change_controls_default(Mesh *mesh)
 {
+        crosshair->hide();
         Scene *scene = (Scene *) mesh->get_scene();
+        scene->get_actor()->deselect();
         scene->set_handler(scene->get_default_handler());
         scene->set_camera((GLuint) 0);
-        printf("Change handler -> default_handler\n");
+        // printf("Change handler -> default_handler\n");
 }
 
 static void
@@ -187,14 +229,16 @@ change_controls_1person(Mesh *mesh)
 {
         Scene *scene = (Scene *) mesh->get_scene();
 
+
         Actor *actor = scene->get_actor();
         if (actor == nullptr) {
-                printf("1st person actor missing!\n");
+                // printf("1st person actor missing!\n");
                 return;
         }
         scene->set_camera(actor->get_following_camera());
         scene->set_handler(__1person_handler);
-        printf("Change handler -> __1person_handler\n");
+        crosshair->show();
+        // printf("Change handler -> __1person_handler\n");
 }
 
 class Template
@@ -213,6 +257,7 @@ class Template
                 Scene *s = new Scene();
                 Mesh *cube = Shape::cube(1);
                 Mesh *plane = Shape::plane(10);
+                Mesh *sphere1 = Shape::sphere(0.25);
                 CamView *camviewer = Shape::camviewer_plane(3);
                 CamView *camviewer2 = Shape::camviewer_plane(3);
                 CamView *camviewer3 = Shape::camviewer_plane(3);
@@ -221,14 +266,17 @@ class Template
                 Camera *c3 = new Camera(vec3(0.0f, 2.0f, -1.0f));
                 Camera *c4 = new Camera(vec3(-2.0f, 2.0f, 0.0f));
                 Camera *ac = new Camera(vec3(0.0f, 0.0f, 0.0f));
-                Actor *a = Shape::actor(1.0f);
-                Mesh *crosshair = Shape::crosshair(0);
+                Actor *a = Shape::actor(0.5, 0.5, 0.5);
+                Mesh *abody = Shape::cube_nocollider(0.5, 1.0, 0.5);
+                crosshair = Shape::crosshair(0);
 
                 cube->translate(vec3(0.0f, 0.7f, 0.0f));
                 plane->set_color(0xAADD00);
 
-                // crosshair->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
-                // crosshair->set_color(0xABC000);
+                sphere1->translate(vec3(8.0f, 2.0f, 0.0f));
+
+                crosshair->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
+                crosshair->set_color(0xABC000);
                 crosshair->disable_sphere_collider();
                 crosshair->set_before_draw_function(disable_depth);
 
@@ -244,27 +292,34 @@ class Template
                 camviewer3->translate(vec3(3.5f, 2.0f, -5.0f));
                 camviewer3->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
 
+                c2->get_mesh()->set_on_select(change_controls_default);
+                c3->get_mesh()->set_on_select(change_controls_default);
+                c4->get_mesh()->set_on_select(change_controls_default);
+                cube->set_on_select(change_controls_default);
+
                 c2->look_at(cube->get_absolute_position());
                 c3->look_at(cube->get_absolute_position());
                 c4->look_at(cube->get_absolute_position());
                 s->add_mesh(plane);
                 s->add_mesh(cube);
+                s->add_mesh(sphere1);
                 s->add_mesh(camviewer);
                 s->add_mesh(camviewer2);
                 s->add_mesh(camviewer3);
 
                 a->set_follow_camera(ac);
-                a->translate(vec3(1.5f, 1.0f, 0.0f));
+                a->translate(vec3(1.5f, 1.5f, 0.0f));
+                abody->translate(vec3(0.0f, -1.0f, 0.0f));
                 s->add_actor(a);
+                a->attach(abody);
                 a->set_on_select(change_controls_1person);
-                a->set_on_deselect(change_controls_default);
 
                 c->get_mesh()->set_on_select(__select_camera);
                 c2->get_mesh()->set_on_select(__select_camera);
                 c3->get_mesh()->set_on_select(__select_camera);
                 c4->get_mesh()->set_on_select(__select_camera);
 
-                // crosshair->add_texture_image("textures/crosshair.png");
+                crosshair->add_texture_image("textures/crosshair.png");
 
                 int cam_id;
                 cam_id = s->add_camera(c);
@@ -285,16 +340,30 @@ class Template
 
                 s->add_mesh(crosshair);
 
+                sphere1->set_on_select(__move);
+
                 int shader_program;
                 shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
-                assert(shader_program>0);
+                assert(shader_program > 0);
                 camviewer->set_shader(shader_program);
                 camviewer2->set_shader(shader_program);
                 camviewer3->set_shader(shader_program);
+                abody->set_shader(shader_program);
 
                 shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
-                assert(shader_program>0);
+                assert(shader_program > 0);
                 crosshair->set_shader(shader_program);
+
+                // clang-format off
+                s->create_skybox({
+                                "./textures/cubemap/posx.jpg",
+                                "./textures/cubemap/negx.jpg",
+                                "./textures/cubemap/posy.jpg",
+                                "./textures/cubemap/negy.jpg",
+                                "./textures/cubemap/posz.jpg",
+                                "./textures/cubemap/negz.jpg",
+                                });
+                // clang-format on
 
                 return s;
         }

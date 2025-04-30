@@ -34,12 +34,14 @@ SphereCollider::draw(mat4 mat, int _do)
 void
 Mesh::show()
 {
+        // printf("Show mesh %s\n", get_name());
         printable = true;
 }
 
 void
 Mesh::hide()
 {
+        // printf("Hide mesh %s\n", get_name());
         printable = false;
 }
 
@@ -218,7 +220,12 @@ Mesh::draw(mat4 _model, int _do)
         _model = _model * model;
 
         for (Mesh *attached_mesh : attached) {
-                printf("attached draw: %s attach to %s\n", attached_mesh->get_name(), get_name());
+                // printf("attached draw: %s attach to %s\n", attached_mesh->get_name(), get_name());
+                // printf("pos: %f,%f,%f\n",
+                //                 attached_mesh->get_position().x,
+                //                 attached_mesh->get_position().y,
+                //                 attached_mesh->get_position().z
+                //                 );
                 (*attached_mesh).draw(_model, _do);
         }
 
@@ -293,6 +300,7 @@ Mesh::attach(Mesh *child)
         if (child->parent) return;
         attached.push_back(child);
         child->parent = this;
+        child->scene = scene;
 }
 
 void

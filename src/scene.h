@@ -1,12 +1,16 @@
 #ifndef SCENE_H_
 #define SCENE_H_
 
+#include <complex>
 #include <glm/ext/vector_float2.hpp>
+#include <glm/geometric.hpp>
+#include <utility>
 #include <vector>
 
 #include "actor.h"
 #include "camera.h"
 #include "mesh.h"
+#include "skybox.h"
 
 #include <GLFW/glfw3.h>
 
@@ -32,6 +36,7 @@ class Scene
         int camera_index;
         void (*_input_handler)(GLFWwindow *, Scene *);
         Actor *actor; // todo: handle actors in a proper way
+        Skybox *skybox;
 
     public:
         Scene()
@@ -42,6 +47,14 @@ class Scene
         }
         ~Scene()
         {
+        }
+
+        void create_skybox(std::vector<std::string> faces)
+        {
+                skybox = new Skybox();
+                skybox->set_scene(this);
+                skybox->add_cubemap_image(faces);
+                skybox->init();
         }
 
         Camera *get_camera(int index = -1);
@@ -74,9 +87,12 @@ class Scene
 
         void unselect_all()
         {
-                for (auto m : meshes)
+                for (auto m : meshes) {
+                        if (m == actor)
+                                continue;
                         if (m->selected())
                                 m->deselect();
+                }
         }
 
         void add_actor(Actor *a)
@@ -174,6 +190,33 @@ cam_movement_input_handler(GLFWwindow *window, Scene *scene)
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
                 glfwSetWindowShouldClose(window, true);
+
+        mat4 m = scene->get_camera()->get_mesh()->get_absolute_model();
+        vec3 dirf = -vec3(0, 0, 1);
+        vec3 right = vec3(1, 0, 0);
+        vec3 posi = scene->get_camera()->get_position();
+        vec3 movement = vec3(0.0f);
+
+        // Movimiento
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                movement += dirf;
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                movement -= dirf;
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                movement -= right;
+
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                movement += right;
+
+        double speed = 2.0f;
+
+        if (movement != vec3(0))
+                movement = normalize(movement) * static_cast<float>(*interframe_time() * speed);
+        // printf("movement: %f,%f,%f\n", movement.x, movement.y, movement.z);
+
+        scene->get_camera()->transform(movement);
 
         if (oneclick(window, GLFW_KEY_T)) {
                 scene->next_camera();

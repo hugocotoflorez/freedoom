@@ -61,9 +61,11 @@ Camera::place(vec3 pos)
 void
 Camera::transform(vec3 pos)
 {
+        //printf("Moving camera by %f,%f,%f\n", pos.x, pos.y, pos.z);
         position += pos;
         if (mesh) {
-                mesh->place(position);
+             mesh->place(position);
+             mesh->look_at(looking_at);
         }
 }
 

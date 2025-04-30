@@ -33,7 +33,7 @@ class SphereCollider
     private:
         float radius;
         Mesh *parent;
-        Mesh *sphere; // representation of itself
+        Mesh *sphere;
         bool active;
         vector<on_collide_func> on_collide;
 

@@ -71,6 +71,15 @@ class Shape
                 return m;
         }
 
+        static Mesh *cube_nocollider(float x, float y, float z)
+        {
+                Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
+                GLuint vao, indexes_n;
+                __cube(&vao, &indexes_n, x, y, z);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
         static Mesh *cube_nocollider(float l)
         {
                 Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
@@ -84,7 +93,16 @@ class Shape
         {
                 Actor *m = new Actor("Actor");
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, l / 2, l, l / 2);
+                __cube(&vao, &indexes_n, l, l, l);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
+        static Actor *actor(float x, float y, float z)
+        {
+                Actor *m = new Actor("Actor");
+                GLuint vao, indexes_n;
+                __cube(&vao, &indexes_n, x, y, z);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -232,10 +250,14 @@ class Shape
                 float _x = size / 2.0f;
 
                 float vertices[] = {
-                        Point(-_x, _x, 0.0f), Texture(0, 1),
-                        Point(-_x, -_x, 0.0f), Texture(0, 0),
-                        Point(_x, -_x, 0.0f), Texture(1, 0),
-                        Point(_x, _x, 0.0f), Texture(1, 1),
+                        Point(-_x, _x, 0.0f),
+                        Texture(0, 1),
+                        Point(-_x, -_x, 0.0f),
+                        Texture(0, 0),
+                        Point(_x, -_x, 0.0f),
+                        Texture(1, 0),
+                        Point(_x, _x, 0.0f),
+                        Texture(1, 1),
                 };
 
                 unsigned int indices[] = {
