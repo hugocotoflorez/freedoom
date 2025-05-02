@@ -103,7 +103,7 @@ class Mesh
         const bool need_render;
 
     private:
-        const char *name;
+        char *name;
         GLuint vao;
         GLuint indexes_n;
         bool printable;
@@ -127,7 +127,7 @@ class Mesh
         int dynamic_camera;
 
     public:
-        Mesh(const char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false, bool has_collider = true)
+        Mesh(char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false, bool has_collider = true)
         : need_render(render),
           name(name),
           vao(0),
@@ -151,6 +151,7 @@ class Mesh
                         sphere_collider = new SphereCollider(0.7f, this);
         }
 
+        void import_obj(const char* path);
         void move(vec3 v);
         void set_vao(GLuint _vao, GLuint _indexes_n);
         void show();

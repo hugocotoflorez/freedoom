@@ -62,7 +62,7 @@ printShaderInfoLog(GLuint obj)
         if (infologLength > 0) {
                 infoLog = (char *) malloc(infologLength);
                 glGetShaderInfoLog(obj, infologLength, &charsWritten, infoLog);
-                printf("%s\n", infoLog);
+                // printf("%s\n", infoLog);
                 free(infoLog);
         }
 }
@@ -79,7 +79,7 @@ printProgramInfoLog(GLuint obj)
         if (infologLength > 0) {
                 infoLog = (char *) malloc(infologLength);
                 glGetProgramInfoLog(obj, infologLength, &charsWritten, infoLog);
-                printf("%s\n", infoLog);
+                // printf("%s\n", infoLog);
                 free(infoLog);
         }
 }

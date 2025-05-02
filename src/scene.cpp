@@ -218,5 +218,5 @@ void
 Scene::next_camera()
 {
         camera_index = (camera_index + 1) % cameras.size();
-        printf("Camera index: %d\n", camera_index);
+        // printf("Camera index: %d\n", camera_index);
 }

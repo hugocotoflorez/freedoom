@@ -9,7 +9,15 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
 
-constexpr bool draw_collision_sphere = true;
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include "../thirdparty/load_obj/load_obj.h"
+
+
+constexpr bool draw_collision_sphere = false;
+
 
 vec3
 SphereCollider::get_position()
@@ -29,6 +37,40 @@ SphereCollider::draw(mat4 mat, int _do)
         if (active)
                 // printf("Drawing sphere collider\n");
                 sphere->draw(mat, _do);
+}
+
+void
+Mesh::import_obj(const char *path)
+{
+        vector<lObject> objs;
+        objs = load_obj(path, LOAD_3_3);
+        if (objs.size() <= 0) {
+                printf("Can not load %s\n", path);
+                return;
+        }
+        lObject current = objs.back();
+        vao = current.vao;
+        indexes_n = current.index_n;
+        // __shader = current.shader;
+        // model = current.model;
+        name = current.name; /* I can do that because current.name is set using strdup. */
+
+        if (current.material && current.material->texture > 0)
+                textures.push_back(current.material->texture);
+        objs.pop_back();
+
+        for (auto obj : objs) {
+                Mesh *m = new Mesh(obj.name, color, printable, need_render, sphere_collider != nullptr);
+                m->set_vao(obj.vao, obj.index_n);
+                // m->set_model(current.model);
+                m->set_scene(scene);
+                obj.shader = __shader;
+                m->set_shader(obj.shader);
+
+                if (obj.material && obj.material->texture > 0)
+                        m->add_texture(obj.material->texture);
+                attach(m);
+        }
 }
 
 void
@@ -58,11 +100,12 @@ Mesh::set_shader(GLuint shader)
         __shader = shader;
         if (sphere_collider && sphere_collider->is_pintable())
                 sphere_collider->get_sphere()->set_shader(shader);
+        for (auto c : attached)
+                c->set_shader(shader);
 }
 
 const char *
-Mesh::
-get_name()
+Mesh::get_name()
 {
         return name;
 }
@@ -128,15 +171,13 @@ Mesh::get_model()
 }
 
 void
-Mesh::
-set_model(mat4 _model)
+Mesh::set_model(mat4 _model)
 {
         model = _model;
 }
 
 void
-Mesh::
-set_before_draw_function(void (*_before_draw)(Mesh *))
+Mesh::set_before_draw_function(void (*_before_draw)(Mesh *))
 {
         before_draw = _before_draw;
 }
@@ -148,8 +189,7 @@ Mesh::set_color(int c)
 }
 
 unsigned int
-Mesh::
-get_shader()
+Mesh::get_shader()
 {
         return __shader;
 }
@@ -235,9 +275,9 @@ Mesh::draw(mat4 _model, int _do)
         if (!printable) return;
 
         glEnable(GL_DEPTH_TEST);
-        if (before_draw) before_draw(this);
-
         glUseProgram(__shader);
+
+        if (before_draw) before_draw(this);
 
         ((Scene *) scene)->get_camera()->set_camera(__shader);
 
@@ -247,7 +287,7 @@ Mesh::draw(mat4 _model, int _do)
         for (size_t i = 0; i < textures.size(); ++i) {
                 GLuint texture = textures.at(i);
                 if (glIsTexture(texture)) {
-                        //printf("Using texture %d for model %s\n", texture, get_name());
+                        // printf("Using texture %d for model %s\n", texture, get_name());
                         glActiveTexture(GL_TEXTURE0 + i);
                         textureLoc = glGetUniformLocation(__shader, ("textures[" + std::to_string(i) + "]").c_str());
                         glUniform1i(textureLoc, i);
@@ -298,9 +338,9 @@ void
 Mesh::attach(Mesh *child)
 {
         if (child->parent) return;
-        attached.push_back(child);
         child->parent = this;
         child->scene = scene;
+        attached.push_back(child);
 }
 
 void
@@ -321,6 +361,8 @@ Mesh::set_scene(void *s)
         scene = s;
         if (sphere_collider && sphere_collider->is_pintable())
                 sphere_collider->get_sphere()->set_scene(s);
+        for (auto c : attached)
+                c->set_scene(s);
 }
 
 void *
@@ -352,9 +394,6 @@ Mesh::init()
 {
         default_model = model;
 }
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 void
 Mesh::add_texture_image(const char *path, int how)

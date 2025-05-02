@@ -1,0 +1,12 @@
+# Blender 4.4.1 MTL File: 'None'
+# www.blender.org
+
+newmtl Makarov
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 0.000000
+d 0.000000
+illum 2
+map_Kd Texture_Makarov_BaseColor.png

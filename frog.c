@@ -10,10 +10,11 @@ int
 main(int argc, char *argv[])
 {
         frog_rebuild_itself(argc, argv);
-        frog_cmd_filtered_foreach("src/", ".*cpp", CC, FLAGS, "-c");
+        frog_cmd_filtered_foreach("src", ".*cpp", CC, FLAGS, "-c");
+        frog_cmd_filtered_foreach("thirdparty/load_obj", ".*cpp", CC, FLAGS, "-c");
         frog_makedir("objs");
         frog_shell_cmd("mv *.o objs")
-        frog_shell_cmd("g++ objs/* -lglad -lglfw -ggdb -o" FILENAME);
+        frog_shell_cmd("g++ objs/* -lglad -lglfw -ggdb -o " FILENAME);
 
         // UNREACHABLE("Just do not execute");
 

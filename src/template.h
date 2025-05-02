@@ -117,19 +117,19 @@ __1person_handler(GLFWwindow *window, Scene *scene)
                 scene->next_camera();
         }
 
-#define SPEED 5.0f
-#define T static_cast<float>(*interframe_time())
+#define SPEED 1.0f
+#define T (static_cast<float>(*interframe_time()))
 
 
         mat4 m = actor->get_absolute_model();
         vec3 dirf = -normalize(vec3(m[2])) * SPEED;
         vec3 right = normalize(vec3(m[0])) * SPEED;
-        vec3 up = normalize(vec3(m[1])) * SPEED;
+        // vec3 up = normalize(vec3(m[1])) * SPEED;
         vec3 posi = actor->get_position();
 
         static vec3 movement = vec3(0.0f);
         static vec3 current_speed = vec3(0.0f);
-        current_speed -= current_speed * T * 100.0f;
+        current_speed *= pow(0.001f, T);
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
                 current_speed += dirf;
@@ -143,33 +143,39 @@ __1person_handler(GLFWwindow *window, Scene *scene)
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
                 current_speed += right;
 
-#define JUMP_SPEED 6.0f
-#define G 9.8f
-        static float jumping_cumt = 0;
-        static bool sp_lock = false;
+#define JUMP_VEL 8.0f
+#define G 20.0f
 
+        static bool sp_lock = false;
+        static float vertical_velocity = 0.0f;
+
+        // Iniciar el salto
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !sp_lock && actor->is_bottom_colliding()) {
-                scene->get_actor()->set_jumping(true);
-                jumping_cumt = T;
-                current_speed += up * (JUMP_SPEED - G * jumping_cumt);
+                actor->set_jumping(true);
+                vertical_velocity = JUMP_VEL;
                 sp_lock = true;
         }
 
-        else if (actor->is_jumping() && !actor->is_bottom_colliding()) {
-                jumping_cumt += T;
-                current_speed += up * (JUMP_SPEED - G * jumping_cumt);
+        // Si está en el aire, aplicar gravedad
+        if (actor->is_jumping() && !actor->is_bottom_colliding()) {
+                vertical_velocity -= G * T;
         }
 
-        movement = (current_speed * T);
+        // Aplicar la velocidad vertical
+        current_speed.y = vertical_velocity;
+
+        // Aplicar movimiento
+        movement = current_speed * T;
         actor->move(movement);
 
+        // Si toca el suelo, resetear el salto
         if (actor->is_bottom_colliding()) {
                 vec3 pos = actor->get_absolute_position();
-                actor->place(vec3(pos.x, 1.5f, pos.z));
+                actor->place(vec3(pos.x, 1.5f, pos.z)); // opcional: ajusta la altura base del personaje
                 actor->set_jumping(false);
-                current_speed.y = 0;
+                vertical_velocity = 0.0f;
+                current_speed.y = 0.0f;
                 sp_lock = false;
-                jumping_cumt = 0;
         }
 }
 
@@ -201,8 +207,8 @@ __move(Mesh *m)
         if (!init)
                 srand(time(NULL));
         int y = rand() % 5 - 2;
-        int x = rand() % 5 - 2;
-        m->place(vec3(position.x, position.y + y, position.z + x));
+        int z = rand() % 5 - 2;
+        m->place(vec3(position.x, position.y + y, position.z + z));
         m->enable_sphere_collider();
         m->deselect();
 }
@@ -270,6 +276,12 @@ class Template
                 Mesh *abody = Shape::cube_nocollider(0.5, 1.0, 0.5);
                 crosshair = Shape::crosshair(0);
 
+                Mesh *weapon = new Mesh("Weapon", 0x000000, true, false, false);
+                float _scale = 5.0f;
+                weapon->set_model(scale(weapon->get_model(), vec3(_scale, _scale, _scale)));
+                weapon->rotate(PIMED, vec3(0.0f, 1.0f / _scale, 0.0f));
+                weapon->translate(vec3(0.1f, 0.1f, 0.1f));
+
                 cube->translate(vec3(0.0f, 0.7f, 0.0f));
                 plane->set_color(0xAADD00);
 
@@ -312,7 +324,10 @@ class Template
                 abody->translate(vec3(0.0f, -1.0f, 0.0f));
                 s->add_actor(a);
                 a->attach(abody);
+                abody->attach(weapon);
                 a->set_on_select(change_controls_1person);
+
+                weapon->import_obj("assets/Untitled.obj");
 
                 c->get_mesh()->set_on_select(__select_camera);
                 c2->get_mesh()->set_on_select(__select_camera);
@@ -321,8 +336,12 @@ class Template
 
                 crosshair->add_texture_image("textures/crosshair.png");
 
+
                 int cam_id;
                 cam_id = s->add_camera(c);
+                // c->get_mesh()->hide();
+                // c->get_mesh()->disable_sphere_collider();
+
                 cam_id = s->add_camera(c2);
                 camviewer->set_dynamic_camera(cam_id);
                 cam_id = s->add_camera(c3);
@@ -336,7 +355,7 @@ class Template
                 s->set_on_collision(__select_obj);
                 s->set_on_select(disable_collision_sphere);
                 s->set_on_deselect(enable_collision_sphere);
-                s->use_shader("shaders/simple_vs.glsl", "shaders/simple_fs.glsl");
+                s->use_shader("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
 
                 s->add_mesh(crosshair);
 
@@ -345,6 +364,7 @@ class Template
                 int shader_program;
                 shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
                 assert(shader_program > 0);
+                weapon->set_shader(shader_program);
                 camviewer->set_shader(shader_program);
                 camviewer2->set_shader(shader_program);
                 camviewer3->set_shader(shader_program);
@@ -364,6 +384,8 @@ class Template
                                 "./textures/cubemap/negz.jpg",
                                 });
                 // clang-format on
+
+                change_controls_default(a);
 
                 return s;
         }

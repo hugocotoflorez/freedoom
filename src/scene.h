@@ -42,7 +42,8 @@ class Scene
         Scene()
         : camera_index(0),
           _input_handler(cam_movement_input_handler),
-          actor(nullptr)
+          actor(nullptr),
+          skybox(nullptr)
         {
         }
         ~Scene()

@@ -16,7 +16,7 @@ class Actor : public Mesh
         bool jumping = false;
 
     public:
-        Actor(const char *name)
+        Actor(char *name)
         : Mesh(name, 0x93ECFB),
           camera(nullptr),
           camera_offset_x(2.0f),
