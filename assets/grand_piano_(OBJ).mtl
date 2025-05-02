@@ -1,0 +1,24 @@
+# Blender 4.2.1 LTS MTL File: 'grand_piano_(BLEND).blend'
+# www.blender.org
+
+newmtl grand_piano
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd grand_piano_Piano_BaseColor.png
+map_Bump -bm 1.000000 grand_piano_Piano_Normal_GL.png
+
+newmtl grand_piano_bench
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd grand_piano_Bench_BaseColor.png
+map_Bump -bm 1.000000 grand_piano_Bench_Normal_GL.png

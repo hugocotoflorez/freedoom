@@ -58,6 +58,7 @@ class Scene
                 skybox->init();
         }
 
+        void repr_audio(const char *filename);
         Camera *get_camera(int index = -1);
         int get_camera_id();
         int add_camera(Camera *c);

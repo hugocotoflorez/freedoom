@@ -277,12 +277,14 @@ class Template
                 crosshair = Shape::crosshair(0);
 
                 Mesh *weapon = new Mesh("Weapon", 0x000000, true, false, false);
+                // Mesh *piano = new Mesh("piano", 0xabc012, true, false, false);
+
                 float _scale = 5.0f;
                 weapon->set_model(scale(weapon->get_model(), vec3(_scale, _scale, _scale)));
                 weapon->rotate(PIMED, vec3(0.0f, 1.0f / _scale, 0.0f));
                 weapon->translate(vec3(0.1f, 0.1f, 0.1f));
 
-                cube->translate(vec3(0.0f, 0.7f, 0.0f));
+                // cube->translate(vec3(0.0f, 0.7f, 0.0f));
                 plane->set_color(0xAADD00);
 
                 sphere1->translate(vec3(8.0f, 2.0f, 0.0f));
@@ -328,6 +330,9 @@ class Template
                 a->set_on_select(change_controls_1person);
 
                 weapon->import_obj("assets/Untitled.obj");
+                // s->add_mesh(piano);
+                // cube->import_obj("assets/WoodenChessSet.obj");
+                cube->import_obj("assets/grand_piano_(OBJ).obj");
 
                 c->get_mesh()->set_on_select(__select_camera);
                 c2->get_mesh()->set_on_select(__select_camera);
@@ -365,6 +370,7 @@ class Template
                 shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
                 assert(shader_program > 0);
                 weapon->set_shader(shader_program);
+                // piano->set_shader(shader_program);
                 camviewer->set_shader(shader_program);
                 camviewer2->set_shader(shader_program);
                 camviewer3->set_shader(shader_program);

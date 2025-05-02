@@ -66,6 +66,27 @@ IntersectRaySphere(vec3 p, vec3 d, SphereCollider *sphere, float &t, vec3 &q)
         return 1;
 }
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+void
+Scene::repr_audio(const char *filename)
+{
+        static bool audio_initialized = false;
+        static ma_engine engine;
+
+        if (!audio_initialized) {
+                if (ma_engine_init(NULL, &engine) != MA_SUCCESS) {
+                        printf("Can not start audio engine!\n");
+                        return;
+                }
+                audio_initialized = true;
+        }
+
+        if (ma_engine_play_sound(&engine, filename, NULL) != MA_SUCCESS) {
+                printf("Can not play sound: %s\n", filename);
+        }
+}
 
 Mesh *
 Scene::get_raycast_collision(vec2 mouse)
@@ -117,6 +138,7 @@ Scene::get_raycast_collision(vec2 mouse)
                 meshes.push_back(c);
                 c->translate(_q);
 
+                repr_audio("assets/pistol.wav");
                 return meshes.at(clickedObject);
         }
 
