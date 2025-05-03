@@ -89,7 +89,7 @@ fps()
 int
 mainloop(GLFWwindow *window)
 {
-        main_scene = Template::plain_scene();
+        main_scene = Template::piano_scene();
         main_scene->init();
 
         while (!glfwWindowShouldClose(window)) {

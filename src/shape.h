@@ -26,7 +26,6 @@ struct gvopts {
 
 class Shape
 {
-    private:
     public:
         Shape()
         {
@@ -44,6 +43,15 @@ class Shape
                 return m;
         }
 
+        static Mesh *hand(float l)
+        {
+                Mesh *m = new Mesh("fullscreen");
+                GLuint vao, indexes_n;
+                __static_fullscreen(&vao, &indexes_n);
+                m->set_vao(vao, indexes_n);
+                return m;
+        }
+
         static Mesh *plane(float l)
         {
                 Mesh *m = new Mesh("plane");
@@ -57,7 +65,7 @@ class Shape
         {
                 CamView *p = new CamView("portal plane");
                 GLuint vao, indexes_n;
-                __square_textured(&vao, &indexes_n, l);
+                square_textured_vao(&vao, &indexes_n, l);
                 p->set_vao(vao, indexes_n);
                 return p;
         }
@@ -66,7 +74,7 @@ class Shape
         {
                 Mesh *m = new Mesh("cube");
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, l, l, l);
+                cube_vao(&vao, &indexes_n, l, l, l);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -75,7 +83,7 @@ class Shape
         {
                 Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, x, y, z);
+                cube_vao(&vao, &indexes_n, x, y, z);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -84,7 +92,7 @@ class Shape
         {
                 Mesh *m = new Mesh("cube no collider", 0xFF0000, true, false, false);
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, l, l, l);
+                cube_vao(&vao, &indexes_n, l, l, l);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -93,7 +101,7 @@ class Shape
         {
                 Actor *m = new Actor("Actor");
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, l, l, l);
+                cube_vao(&vao, &indexes_n, l, l, l);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -102,7 +110,7 @@ class Shape
         {
                 Actor *m = new Actor("Actor");
                 GLuint vao, indexes_n;
-                __cube(&vao, &indexes_n, x, y, z);
+                cube_vao(&vao, &indexes_n, x, y, z);
                 m->set_vao(vao, indexes_n);
                 return m;
         }
@@ -146,7 +154,6 @@ class Shape
                 return m;
         }
 
-    private:
         static void
         __gen_vao(GLuint *VAO, size_t n, const float *vertex, size_t m, const GLuint *indexes,
                   struct gvopts opts)
@@ -244,6 +251,42 @@ class Shape
         }
 
         static void
+        __static_fullscreen(GLuint *VAO, GLuint *indexes_n)
+        {
+                float size = 1.0f; // fullscreen
+                float _x = size;
+
+                float vertices[] = {
+                        Point(-_x, _x, 0.0f),
+                        Texture(0, 1),
+                        Point(-_x, -_x, 0.0f),
+                        Texture(0, 0),
+                        Point(_x, -_x, 0.0f),
+                        Texture(1, 0),
+                        Point(_x, _x, 0.0f),
+                        Texture(1, 1),
+                };
+
+                unsigned int indices[] = {
+                        Face4(0, 1, 2, 3)
+                };
+
+                *indexes_n = SIZE(indices);
+
+                struct gvopts opts;
+                opts.vertex_start = 0;
+                opts.vertex_coords = 3;
+                opts.texture_start = 3;
+                opts.texture_coords = 2;
+                opts.padd = 5;
+                opts.use_vertex = true;
+                opts.use_texture = true;
+                opts.use_normal = false;
+
+                __gen_vao(VAO, SIZE(vertices), vertices, SIZE(indices), indices, opts);
+        }
+
+        static void
         __crosshair_square(GLuint *VAO, GLuint *indexes_n)
         {
                 float size = 0.2f; // Tamaño bien grande (ajústalo después)
@@ -315,7 +358,7 @@ class Shape
         }
 
         static void
-        __square_textured(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
+        square_textured_vao(GLuint *VAO, GLuint *indexes_n, float x, float texture_scale = 1, float relation = 1)
         {
                 float _x = x / 2.0f;
                 float vertices[] = {
@@ -406,7 +449,7 @@ class Shape
 
         /* Create a cube with a given (x, y, z) size */
         static void
-        __cube(GLuint *VAO, GLuint *indexes_n, float x, float y, float z)
+        cube_vao(GLuint *VAO, GLuint *indexes_n, float x, float y, float z)
         {
                 /*                                       | y
              0(-x,y,-z)-> /---------/|<- (x,y,-z)4       |

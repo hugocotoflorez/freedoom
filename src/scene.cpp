@@ -7,6 +7,7 @@
 #include "setShaders.h"
 #include <cstdio>
 #include <glm/geometric.hpp>
+#include <queue>
 
 
 #define LOG_PRINT 0
@@ -83,7 +84,7 @@ Scene::repr_audio(const char *filename)
                 audio_initialized = true;
         }
 
-        if (ma_engine_play_sound(&engine, filename, NULL) != MA_SUCCESS) {
+        if (filename && ma_engine_play_sound(&engine, filename, NULL) != MA_SUCCESS) {
                 printf("Can not play sound: %s\n", filename);
         }
 }
@@ -112,11 +113,29 @@ Scene::get_raycast_collision(vec2 mouse)
         float minDist = 10000.0f;
         vec3 _q; // collision point
 
-        for (size_t i = 0; i < meshes.size(); ++i) {
+        vector<Mesh *> __m;
+        queue<Mesh *> pending;
+
+        for (auto *m : meshes) {
+                __m.push_back(m);
+                pending.push(m);
+        }
+
+        while (!pending.empty()) {
+                Mesh *current = pending.front();
+                pending.pop();
+
+                for (auto *attached : current->get_attached_meshes()) {
+                        __m.push_back(attached);
+                        pending.push(attached);
+                }
+        }
+
+        for (size_t i = 0; i < __m.size(); ++i) {
                 float t; // collision distance
                 vec3 q; // collision point
                 vec3 direction = normalize(vec3(to) - vec3(from));
-                if (IntersectRaySphere(camera->get_position(), direction, meshes.at(i)->get_sphere_collider(), t, q)) {
+                if (IntersectRaySphere(camera->get_position(), direction, __m.at(i)->get_sphere_collider(), t, q)) {
                         // object i has been clicked. probably best to find the minimum t1 (front-most object)
 
                         if (t < minDist) {
@@ -128,18 +147,20 @@ Scene::get_raycast_collision(vec2 mouse)
         }
 
         if (clickedObject >= 0) {
-                // printf("Click on %s\n", meshes.at(clickedObject)->get_name());
-                meshes.at(clickedObject)->get_sphere_collider()->on_collision();
+                // printf("Click on %s\n", __m.at(clickedObject)->get_name());
+                __m.at(clickedObject)->get_sphere_collider()->on_collision();
 
                 /* Represent collision point */
+#if defined(show_collision_point) && show_collision_point
                 Mesh *c = Shape::cube_nocollider(0.1f);
-                c->set_shader(meshes.at(0)->get_shader()); // TODO
+                c->set_shader(__m.at(0)->get_shader()); // TODO
                 c->set_scene(this);
-                meshes.push_back(c);
+                __m.push_back(c);
                 c->translate(_q);
+#endif
 
-                repr_audio("assets/pistol.wav");
-                return meshes.at(clickedObject);
+                // repr_audio("assets/pistol.wav");
+                return __m.at(clickedObject);
         }
 
         return nullptr;
@@ -223,6 +244,7 @@ Scene::draw()
 void
 Scene::init()
 {
+        repr_audio(NULL); // init engine
         for (auto m : meshes)
                 m->init();
 }

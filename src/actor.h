@@ -32,7 +32,7 @@ class Actor : public Mesh
 
         bool is_bottom_colliding()
         {
-                return get_absolute_position().y <= 1.5f;
+                return get_absolute_position().y <= 1.5;
         }
 
         void set_jumping(bool j)
@@ -70,12 +70,21 @@ class Actor : public Mesh
         {
                 if (camera == nullptr) return;
 
+                /* for aimlabs */
+                // mat4 m = get_absolute_model();
+                // vec3 pos = get_absolute_position();
+                // vec3 dirf = normalize(vec3(m[2]));
+                // vec3 right = normalize(vec3(m[0])) * 0.4f;
+                // camera->look_at(pos + right);
+                // camera->place(pos + right +  dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
+                // camera->set_up(vec3(m[1]));
+
+                /* for piano */
                 mat4 m = get_absolute_model();
                 vec3 pos = get_absolute_position();
                 vec3 dirf = normalize(vec3(m[2]));
-                vec3 right = normalize(vec3(m[0])) * 0.4f;
-                camera->look_at(pos + right);
-                camera->place(pos + right +  dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
+                camera->look_at(pos);
+                camera->place(pos + dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
                 camera->set_up(vec3(m[1]));
         }
 

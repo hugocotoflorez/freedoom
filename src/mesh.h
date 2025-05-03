@@ -10,6 +10,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include <cstdio>
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -93,6 +94,7 @@ class SphereCollider
                 return parent;
         }
 
+        void scale(vec3 v);
         void set_sphere(float r);
         vec3 get_position();
 };
@@ -127,7 +129,7 @@ class Mesh
         int dynamic_camera;
 
     public:
-        Mesh(char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false, bool has_collider = true)
+        Mesh(char *name, int _color = 0xFFFFFF, bool _printable = true, bool render = false, bool has_collider = true, float collider_radius = 0.7f)
         : need_render(render),
           name(name),
           vao(0),
@@ -147,11 +149,13 @@ class Mesh
           input_handler(nullptr),
           attached_camera(nullptr)
         {
-                if (has_collider)
-                        sphere_collider = new SphereCollider(0.7f, this);
+                if (has_collider) {
+                        // printf("Creating collider sphere with r=%f for mesh %s\n", collider_radius, name);
+                        sphere_collider = new SphereCollider(collider_radius, this);
+                }
         }
 
-        void import_obj(const char* path);
+        vector<Mesh *> import_obj(const char *path);
         void move(vec3 v);
         void set_vao(GLuint _vao, GLuint _indexes_n);
         void show();
@@ -171,6 +175,8 @@ class Mesh
         void set_before_draw_function(void (*_before_draw)(Mesh *));
         unsigned int get_shader();
         void rotate(float angle, vec3 v);
+        void scale(vec3 v);
+        void scale(float v);
         void translate(vec3 v);
         void look_at2d(vec3 view_pos);
         void look_at(vec3 view_pos);
@@ -201,6 +207,11 @@ class Mesh
         bool selected()
         {
                 return is_selected;
+        }
+
+        vector<Mesh *> get_attached_meshes()
+        {
+                return attached;
         }
 
         void set_on_select(void (*func)(Mesh *))

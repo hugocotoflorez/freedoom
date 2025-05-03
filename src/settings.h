@@ -14,7 +14,10 @@
 
 /* Enable VSync. FPS limited to screen refresh rate
  * (0: disable, 1: enable, undef: default) */
-#define VSYNC 0
+#define VSYNC 1
+
+#define show_collision_point 0
+#define draw_collision_sphere 0
 
 
 #endif // SETTINGS_H_

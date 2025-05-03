@@ -1,6 +1,7 @@
 #include "actor.h"
 #include "camera.h"
 #include "mesh.h"
+#include "piano.h"
 #include "scene.h"
 #include "settings.h"
 #include "shape.h"
@@ -53,6 +54,134 @@ Mesh *crosshair;
 
 static void
 __1person_handler(GLFWwindow *window, Scene *scene)
+{
+        /* Esto no deberia ir aqui */
+        if (mouse_mode != GLFW_CURSOR_DISABLED) {
+                mouse_mode = GLFW_CURSOR_DISABLED;
+                if (glfwRawMouseMotionSupported())
+                        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+
+        static bool initialized = false;
+        static float xprev, yprev;
+        double _xpos, _ypos;
+
+        Actor *actor = scene->get_actor();
+
+        glfwGetCursorPos(window, &_xpos, &_ypos);
+        float xpos = static_cast<float>(_xpos);
+        float ypos = static_cast<float>(_ypos);
+
+        if (!initialized) {
+                xprev = xpos;
+                yprev = ypos;
+                initialized = true;
+        }
+
+        float xoffset = -xpos + xprev;
+        float yoffset = ypos - yprev;
+
+        actor->rotate(xoffset * MOUSE_SENS_X * MOUSE_REDUCTION * MOUSE_FIRST_PERSON_SENS_X, vec3(0, 1, 0));
+
+        float X = actor->get_camera_xoffset();
+        float Y = actor->get_camera_yoffset();
+        float J = yoffset * MOUSE_SENS_Y * MOUSE_REDUCTION * MOUSE_FIRST_PERSON_SENS_Y;
+        float I;
+        if (calc_x2(X, Y, Y + J, I)) {
+                actor->set_camera_yoffset(Y + J);
+                actor->set_camera_xoffset(I);
+        } else {
+                // printf("No existe solucion para x2\n");
+        }
+
+
+        static bool lock_l = false;
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !lock_l) {
+                /* The *2.0f - 1.0 is to transform from [0,1] to [-1, 1] */
+                vec2 mouse = vec2(0, 0);
+                scene->get_raycast_collision(mouse);
+                lock_l = true;
+        }
+
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE && lock_l) {
+                lock_l = false;
+        }
+
+        xprev = xpos;
+        yprev = ypos;
+
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, true);
+
+        if (oneclick(window, GLFW_KEY_T)) {
+                scene->next_camera();
+        }
+
+#define SPEED 1.0f
+#define T (static_cast<float>(*interframe_time()))
+
+
+        mat4 m = actor->get_absolute_model();
+        vec3 dirf = -normalize(vec3(m[2])) * SPEED;
+        vec3 right = normalize(vec3(m[0])) * SPEED;
+        // vec3 up = normalize(vec3(m[1])) * SPEED;
+        vec3 posi = actor->get_position();
+
+        static vec3 movement = vec3(0.0f);
+        static vec3 current_speed = vec3(0.0f);
+        current_speed *= pow(0.001f, T);
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                current_speed += dirf;
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                current_speed -= dirf;
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                current_speed -= right;
+
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                current_speed += right;
+
+#define JUMP_VEL 8.0f
+#define G 20.0f
+
+        static bool sp_lock = false;
+        static float vertical_velocity = 0.0f;
+
+        // Iniciar el salto
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !sp_lock && actor->is_bottom_colliding()) {
+                actor->set_jumping(true);
+                vertical_velocity = JUMP_VEL;
+                sp_lock = true;
+        }
+
+        // Si está en el aire, aplicar gravedad
+        if (actor->is_jumping() && !actor->is_bottom_colliding()) {
+                vertical_velocity -= G * T;
+        }
+
+        // Aplicar la velocidad vertical
+        current_speed.y = vertical_velocity;
+
+        // Aplicar movimiento
+        movement = current_speed * T;
+        actor->move(movement);
+
+        // Si toca el suelo, resetear el salto
+        if (actor->is_bottom_colliding()) {
+                vec3 pos = actor->get_absolute_position();
+                actor->place(vec3(pos.x, 1.5f, pos.z)); // opcional: ajusta la altura base del personaje
+                actor->set_jumping(false);
+                vertical_velocity = 0.0f;
+                current_speed.y = 0.0f;
+                sp_lock = false;
+        }
+}
+
+static void
+__1person_handler_piano(GLFWwindow *window, Scene *scene)
 {
         /* Esto no deberia ir aqui */
         if (mouse_mode != GLFW_CURSOR_DISABLED) {
@@ -247,6 +376,12 @@ change_controls_1person(Mesh *mesh)
         // printf("Change handler -> __1person_handler\n");
 }
 
+static void
+__play_pianokey(SphereCollider *c)
+{
+        ((PianoKey *) c->get_parent())->play();
+}
+
 class Template
 {
     private:
@@ -277,14 +412,12 @@ class Template
                 crosshair = Shape::crosshair(0);
 
                 Mesh *weapon = new Mesh("Weapon", 0x000000, true, false, false);
-                // Mesh *piano = new Mesh("piano", 0xabc012, true, false, false);
 
-                float _scale = 5.0f;
-                weapon->set_model(scale(weapon->get_model(), vec3(_scale, _scale, _scale)));
-                weapon->rotate(PIMED, vec3(0.0f, 1.0f / _scale, 0.0f));
+                weapon->scale(5.0f);
+                weapon->rotate(PIMED, vec3(0.0f, 1.0f / 5.0f, 0.0f));
                 weapon->translate(vec3(0.1f, 0.1f, 0.1f));
 
-                // cube->translate(vec3(0.0f, 0.7f, 0.0f));
+                cube->translate(vec3(0.0f, 0.7f, 0.0f));
                 plane->set_color(0xAADD00);
 
                 sphere1->translate(vec3(8.0f, 2.0f, 0.0f));
@@ -330,9 +463,6 @@ class Template
                 a->set_on_select(change_controls_1person);
 
                 weapon->import_obj("assets/Untitled.obj");
-                // s->add_mesh(piano);
-                // cube->import_obj("assets/WoodenChessSet.obj");
-                cube->import_obj("assets/grand_piano_(OBJ).obj");
 
                 c->get_mesh()->set_on_select(__select_camera);
                 c2->get_mesh()->set_on_select(__select_camera);
@@ -344,8 +474,6 @@ class Template
 
                 int cam_id;
                 cam_id = s->add_camera(c);
-                // c->get_mesh()->hide();
-                // c->get_mesh()->disable_sphere_collider();
 
                 cam_id = s->add_camera(c2);
                 camviewer->set_dynamic_camera(cam_id);
@@ -355,6 +483,7 @@ class Template
 
                 cam_id = s->add_camera(ac);
                 camviewer3->set_dynamic_camera(cam_id);
+                ac->get_mesh()->disable_sphere_collider();
 
                 s->set_on_collision(__unselect_all);
                 s->set_on_collision(__select_obj);
@@ -370,7 +499,6 @@ class Template
                 shader_program = setShaders("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
                 assert(shader_program > 0);
                 weapon->set_shader(shader_program);
-                // piano->set_shader(shader_program);
                 camviewer->set_shader(shader_program);
                 camviewer2->set_shader(shader_program);
                 camviewer3->set_shader(shader_program);
@@ -392,6 +520,85 @@ class Template
                 // clang-format on
 
                 change_controls_default(a);
+
+                return s;
+        }
+
+        static Scene *piano_scene()
+        {
+                Scene *s = new Scene();
+                Camera *c = new Camera(vec3(0.0f, 0.0f, 0.0f));
+                Mesh *piano = new Mesh("Piano", 0xffffff, true, false, false);
+                Mesh *scene_mesh = new Mesh("Piano", 0xffffff, true, false, false);
+                Actor *a = Shape::actor(0.5, 0.5, 0.5);
+                Mesh *hand = Shape::hand(0);
+
+                s->add_camera(c);
+                c->get_mesh()->hide();
+                c->get_mesh()->disable_sphere_collider();
+                a->set_follow_camera(c);
+                s->set_handler(__1person_handler);
+                a->hide();
+                a->disable_sphere_collider();
+                a->set_camera_yoffset(1.0f);
+                a->set_camera_xoffset(1.0f);
+                a->translate(vec3(0.0f, 2.0f, 0.0f));
+                a->translate(vec3(0.0f, 0.0f, 2.0f));
+
+                s->add_actor(a);
+                s->add_mesh(piano);
+                piano->import_obj("assets/grand_piano_(OBJ).obj");
+                s->add_mesh(scene_mesh);
+                scene_mesh->import_obj("assets/WalthamAbbeyGate02.obj");
+                scene_mesh->translate(vec3(1.0f, -2.55f, -10.0f));
+                scene_mesh->rotate(PIMED, vec3(-1.0f, 0.0f, 0.0f));
+                scene_mesh->scale(1.0f / 2.0f);
+                piano->scale(2.0f);
+
+                hand->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
+                hand->set_color(0xABC000);
+                hand->disable_sphere_collider();
+                hand->set_before_draw_function(disable_depth);
+                hand->add_texture_image("assets/hand_pointning.png");
+                s->add_mesh(hand);
+
+                constexpr int piano_keys_white = 52;
+                constexpr int piano_keys_black = 36;
+                constexpr float width = 0.05;
+                constexpr float height = 0.01;
+                constexpr float padding = 0.0235f;
+                constexpr unsigned char padding_black[] = {
+                        2, 4, 5, 7, 8, 9, 11, 12, 14, 15, 16, 18, 19, 21, 22, 23, 25, 26, 28,
+                        29, 30, 32, 33, 35, 36, 37, 39, 40, 42, 43, 44, 46, 47, 49, 50, 51
+                };
+
+                GLuint vao, indexes_n;
+                Shape::cube_vao(&vao, &indexes_n, width, height, width);
+                PianoKey *key_colliders[piano_keys_white + piano_keys_black];
+
+                int i;
+                int j;
+                for (i = 0; i < piano_keys_white; i++) {
+                        key_colliders[i] = new PianoKey(i, 0xffffff, false, false, true, width / 2.0f);
+                        key_colliders[i]->rotate(-0.02f, vec3(0.0f, 1.0f, 0.0f));
+                        key_colliders[i]->translate(vec3(-0.734f + padding * i, 0.73f, 0.65f));
+                        key_colliders[i]->set_vao(vao, indexes_n);
+                        key_colliders[i]->get_sphere_collider()->set_on_collide(__play_pianokey);
+                        piano->attach(key_colliders[i]);
+                }
+
+                for (j = 0; j < piano_keys_black; j++) {
+                        key_colliders[++i] = new PianoKey(i, 0xffffff, false, false, true, width / 2.0f);
+                        key_colliders[i]->rotate(-0.02f, vec3(0.0f, 1.0f, 0.0f));
+                        key_colliders[i]->translate(vec3(-0.75f - 0.022f + padding * padding_black[j], 0.73f, 0.65f - 0.05));
+                        key_colliders[i]->set_vao(vao, indexes_n);
+                        key_colliders[i]->get_sphere_collider()->set_on_collide(__play_pianokey);
+                        piano->attach(key_colliders[i]);
+                }
+
+                s->use_shader("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
+                GLuint shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
+                hand->set_shader(shader_program);
 
                 return s;
         }

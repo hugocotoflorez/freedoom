@@ -1,9 +1,13 @@
+#include "mesh.h"
 #include "camera.h"
 #include "scene.h"
+#include "settings.h"
 #include "shape.h"
+#include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <glm/common.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -16,13 +20,16 @@
 #include "../thirdparty/load_obj/load_obj.h"
 
 
-constexpr bool draw_collision_sphere = false;
-
-
 vec3
 SphereCollider::get_position()
 {
         return parent->get_absolute_position();
+}
+
+void
+SphereCollider::scale(vec3 v)
+{
+        radius *= std::max(v.x, std::max(v.y, v.z));
 }
 
 void
@@ -39,14 +46,15 @@ SphereCollider::draw(mat4 mat, int _do)
                 sphere->draw(mat, _do);
 }
 
-void
+vector<Mesh *>
 Mesh::import_obj(const char *path)
 {
+        vector<Mesh *> attached_childs;
         vector<lObject> objs;
         objs = load_obj(path, LOAD_3_3);
         if (objs.size() <= 0) {
                 printf("Can not load %s\n", path);
-                return;
+                return attached_childs;
         }
         lObject current = objs.back();
         vao = current.vao;
@@ -61,6 +69,7 @@ Mesh::import_obj(const char *path)
 
         for (auto obj : objs) {
                 Mesh *m = new Mesh(obj.name, color, printable, need_render, sphere_collider != nullptr);
+                attached_childs.push_back(m);
                 m->set_vao(obj.vao, obj.index_n);
                 // m->set_model(current.model);
                 m->set_scene(scene);
@@ -71,6 +80,7 @@ Mesh::import_obj(const char *path)
                         m->add_texture(obj.material->texture);
                 attach(m);
         }
+        return attached_childs;
 }
 
 void
@@ -194,9 +204,27 @@ Mesh::get_shader()
         return __shader;
 }
 
+#include <queue>
 void
-Mesh::
-rotate(float angle, vec3 v)
+Mesh::scale(vec3 v)
+{
+        model = glm::scale(model, v);
+        if (sphere_collider)
+                sphere_collider->scale(v);
+        for (auto m : attached) {
+                if (m->get_sphere_collider())
+                        m->get_sphere_collider()->scale(v);
+        }
+}
+
+void
+Mesh::scale(float v)
+{
+        this->scale(vec3(v, v, v));
+}
+
+void
+Mesh::rotate(float angle, vec3 v)
 {
         model = glm::rotate(model, angle, v);
 }
@@ -272,12 +300,14 @@ Mesh::draw(mat4 _model, int _do)
         if (sphere_collider && sphere_collider->is_pintable() && draw_collision_sphere)
                 sphere_collider->draw(_model);
 
-        if (!printable) return;
 
-        glEnable(GL_DEPTH_TEST);
         glUseProgram(__shader);
+        glEnable(GL_DEPTH_TEST);
 
         if (before_draw) before_draw(this);
+        if (!printable) return;
+
+        // printf("Drawing: %s\n", get_name());
 
         ((Scene *) scene)->get_camera()->set_camera(__shader);
 
@@ -315,6 +345,7 @@ Mesh::draw(mat4 _model, int _do)
         }
 
         if (_do & DRAW_FILL) {
+                glDisable(GL_CULL_FACE);
                 glUniform3f(glGetUniformLocation(__shader, "color"), HexColor(color));
                 glBindVertexArray(vao);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -339,7 +370,10 @@ Mesh::attach(Mesh *child)
 {
         if (child->parent) return;
         child->parent = this;
+        assert(scene && "Parent has no scene while attaching!\n");
         child->scene = scene;
+        if (child->get_sphere_collider())
+                child->get_sphere_collider()->get_sphere()->set_scene(scene);
         attached.push_back(child);
 }
 

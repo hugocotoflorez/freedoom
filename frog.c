@@ -2,7 +2,7 @@
 #include "thirdparty/frog/frog.h"
 
 #define FILENAME "freedoom"
-#define FLAGS "-Wall", "-Wextra", "-Wno-unused-parameter", "-Wno-unused-but-set-variable", "-ggdb"
+#define FLAGS "-Wall", "-Wextra", "-Wno-unused-parameter", "-Wno-unused-but-set-variable", "-ggdb", "-Wno-write-strings"
 #define LIBS "-lglad", "-lglfw"
 #define CC "g++"
 
@@ -10,8 +10,9 @@ int
 main(int argc, char *argv[])
 {
         frog_rebuild_itself(argc, argv);
-        frog_cmd_filtered_foreach("src", ".*cpp", CC, FLAGS, "-c");
+
         frog_cmd_filtered_foreach("thirdparty/load_obj", ".*cpp", CC, FLAGS, "-c");
+        frog_cmd_filtered_foreach("src", ".*cpp", CC, FLAGS, "-c");
         frog_makedir("objs");
         frog_shell_cmd("mv *.o objs")
         frog_shell_cmd("g++ objs/* -lglad -lglfw -ggdb -o " FILENAME);

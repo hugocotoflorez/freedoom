@@ -41,7 +41,7 @@ class CamView : public Mesh
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 // glBindTexture(GL_TEXTURE_2D, 0);
-                // printf("Adding render_texture\n");
+                printf("Adding render_texture\n");
                 add_texture(render_texture);
         }
 
@@ -74,7 +74,7 @@ class CamView : public Mesh
           prev_fb(0)
         {
                 memset(prev_vp, 0, sizeof(prev_vp));
-                // printf("Calling camview constructor\n");
+                printf("Calling camview constructor\n");
         }
 
         void config(int h = 0, int w = 0)
