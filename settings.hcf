@@ -9,4 +9,4 @@ options:
 
 dev:
         show_collision_point    off
-        draw_collision_sphere   off
+        draw_collision_sphere   on

@@ -465,7 +465,7 @@ class Template
 
                 GLuint vao, indexes_n;
                 Shape::cube_vao(&vao, &indexes_n, width, height, width);
-                PianoKey *key_colliders[piano_keys_white + piano_keys_black];
+                PianoKey *key_colliders[2 * piano_keys_white + piano_keys_black];
 
                 int i;
                 int j;
@@ -486,6 +486,18 @@ class Template
                         key_colliders[i]->get_sphere_collider()->set_on_collide(__play_pianokey);
                         piano->attach(key_colliders[i]);
                 }
+
+#define DOUBLE_COLLISION_LAYER 1
+#if defined(DOUBLE_COLLISION_LAYER) && DOUBLE_COLLISION_LAYER
+                for (j = 0; j < piano_keys_white; j++) {
+                        key_colliders[++i] = new PianoKey(j, 0xffffff, false, false, true, width / 2.0f);
+                        key_colliders[i]->rotate(-0.02f, vec3(0.0f, 1.0f, 0.0f));
+                        key_colliders[i]->translate(vec3(-0.734f + padding * j, 0.73, 0.65f - width / 2));
+                        key_colliders[i]->set_vao(vao, indexes_n);
+                        key_colliders[i]->get_sphere_collider()->set_on_collide(__play_pianokey);
+                        piano->attach(key_colliders[i]);
+                }
+#endif
 
                 s->use_shader("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
                 GLuint shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
