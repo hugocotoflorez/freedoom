@@ -145,7 +145,13 @@ cam_movement_input_handler(GLFWwindow *window, Scene *scene)
         /* Esto no deberia ir aqui */
         if (mouse_mode != GLFW_CURSOR_CAPTURED) {
                 mouse_mode = GLFW_CURSOR_CAPTURED;
+
+                /* glfw for windows dont have this */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__)
+#else
                 if (glfwRawMouseMotionSupported())
+#endif
+
                         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
                 // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);

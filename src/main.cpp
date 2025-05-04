@@ -122,8 +122,8 @@ main()
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        // GLFWmonitor *monitor = glfwGetPrimaryMonitor(); // fullscreen
-        GLFWmonitor *monitor = NULL; // floating (or not)
+        GLFWmonitor *monitor = glfwGetPrimaryMonitor(); // fullscreen
+        // GLFWmonitor *monitor = NULL; // floating (or not)
         GLFWwindow *share = NULL;
         GLFWwindow *window = glfwCreateWindow(width, height, "Titulo", monitor, share);
 

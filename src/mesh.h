@@ -6,7 +6,7 @@
         ((hex_color & 0xFF00) >> 8) / 256.0,    \
         ((hex_color & 0xFF)) / 256.0
 
-#include <glad.h>
+#include <glad/glad.h>
 
 #include <GLFW/glfw3.h>
 

@@ -1,0 +1,36 @@
+-- Broken Piano Simulator --
+
+[Es]
+
+Descripción: Broken Piano Simulator es un simulador de piano ambientado en la
+iglesia prioral de San Bartolomé el Grande, en Smithfield, Londres. El piano de
+cola cuenta con 88 teclas funcionales, con sonido grabado de un piano real. La
+simulación ofrece una vista en primera persona con un brazo virtual para pulsar
+las teclas, acompañado de una cruceta que permite identificar a dónde se está
+apuntando. El movimiento es pseudorealista, permitiendo desplazarse en 8
+direcciones y saltar.
+
+Cómo jugar: Inicia el juego si ya tienes una versión compilada. Aparecerá una
+pantalla en negro mientras se cargan los modelos necesarios. Después de eso,
+deberías poder ver la escena correctamente. Asegúrate de tener el ratón dentro
+de la ventana, ya que es la única manera de mover la cámara. Para moverte, usa
+las teclas WASD, y espacio para saltar. Coloca la mano (es decir, la cruceta
+junto a la mano) sobre el borde de una tecla del piano y haz clic con el botón
+izquierdo del ratón para “tocar” esa tecla. Deberías escuchar el sonido
+correspondiente.
+
+Problemas y soluciones:
+
+- No se ejecuta: Lo hice en Linux y probé el .exe con Wine; funcionaba. Si no
+  te funciona, intenta recompilar.
+- Los modelos no cargan bien: Vuelve a descargar los modelos.
+- No hay audio: Comprueba que los drivers de sonido estén actualizados.
+
+Pasos para compilar:
+
+ 1. Descarga el código fuente. Puedes encontrarlo aquí (si el desarrollador no
+ lo ha sobrescrito): https://github.com/hugocotoflorez/freedoom 2a. Si usas
+ Linux, el desarrollador propone usar su librería frog. Compila frog.c con
+ cualquier compilador de C y ejecuta el binario resultante. 2b. Si usas
+ Windows… no sé. 2c. Para compilar para Windows desde Linux, hay un Makefile
+ que quizás funcione.

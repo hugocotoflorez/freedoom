@@ -30,9 +30,15 @@ class Actor : public Mesh
                 camera_offset_y = y;
         }
 
+        float get_default_height()
+        {
+                static float __height = get_absolute_position().y;
+                return __height;
+        }
+
         bool is_bottom_colliding()
         {
-                return get_absolute_position().y <= 1.5;
+                return get_absolute_position().y <= get_default_height();
         }
 
         void set_jumping(bool j)
