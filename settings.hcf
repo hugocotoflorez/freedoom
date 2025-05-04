@@ -1,0 +1,12 @@
+mouse:
+        sens_x          2.0
+        sens_y          2.0
+        reduction       0.001
+
+options:
+        show_fps        on
+        vsync           on
+
+dev:
+        show_collision_point    off
+        draw_collision_sphere   off
