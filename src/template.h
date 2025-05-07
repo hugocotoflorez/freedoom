@@ -50,7 +50,8 @@ calc_x2(float x1, float y1, float y2, float &x2)
 
 extern double *interframe_time();
 extern int mouse_mode;
-Mesh *crosshair;
+Mesh *crosshair1;
+Mesh *crosshair2;
 
 static void
 __1person_handler(GLFWwindow *window, Scene *scene)
@@ -224,7 +225,8 @@ __move(Mesh *m)
 static void
 change_controls_default(Mesh *mesh)
 {
-        crosshair->hide();
+        if (crosshair1) crosshair1->hide();
+        if (crosshair2) crosshair2->hide();
         Scene *scene = (Scene *) mesh->get_scene();
         scene->get_actor()->deselect();
         scene->set_handler(scene->get_default_handler());
@@ -251,7 +253,8 @@ change_controls_1person(Mesh *mesh)
         }
         scene->set_camera(actor->get_following_camera());
         scene->set_handler(__1person_handler);
-        crosshair->show();
+        if (crosshair1) crosshair1->show();
+        if (crosshair2) crosshair2->show();
         // printf("Change handler -> __1person_handler\n");
 }
 
@@ -288,7 +291,7 @@ class Template
                 Camera *ac = new Camera(vec3(0.0f, 0.0f, 0.0f));
                 Actor *a = Shape::actor(0.5, 0.5, 0.5);
                 Mesh *abody = Shape::cube_nocollider(0.5, 1.0, 0.5);
-                crosshair = Shape::crosshair(0);
+                crosshair1 = Shape::crosshair(0);
 
                 Mesh *weapon = new Mesh("Weapon", 0x000000, true, false, false);
 
@@ -301,10 +304,10 @@ class Template
 
                 sphere1->translate(vec3(8.0f, 2.0f, 0.0f));
 
-                crosshair->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
-                crosshair->set_color(0xABC000);
-                crosshair->disable_sphere_collider();
-                crosshair->set_before_draw_function(disable_depth);
+                crosshair1->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
+                crosshair1->set_color(0xABC000);
+                crosshair1->disable_sphere_collider();
+                crosshair1->set_before_draw_function(disable_depth);
 
                 camviewer->config();
                 camviewer->translate(vec3(-3.5f, 2.0f, -5.0f));
@@ -340,6 +343,7 @@ class Template
                 a->attach(abody);
                 abody->attach(weapon);
                 a->set_on_select(change_controls_1person);
+                a->set_camera_zoffset(0.4);
 
                 weapon->import_obj("assets/Untitled.obj");
 
@@ -348,7 +352,7 @@ class Template
                 c3->get_mesh()->set_on_select(__select_camera);
                 c4->get_mesh()->set_on_select(__select_camera);
 
-                crosshair->add_texture_image("textures/crosshair.png");
+                crosshair1->add_texture_image("textures/crosshair.png");
 
 
                 int cam_id;
@@ -370,7 +374,7 @@ class Template
                 s->set_on_deselect(enable_collision_sphere);
                 s->use_shader("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
 
-                s->add_mesh(crosshair);
+                s->add_mesh(crosshair1);
 
                 sphere1->set_on_select(__move);
 
@@ -385,7 +389,7 @@ class Template
 
                 shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
                 assert(shader_program > 0);
-                crosshair->set_shader(shader_program);
+                crosshair1->set_shader(shader_program);
 
                 // clang-format off
                 s->create_skybox({
@@ -411,7 +415,7 @@ class Template
                 Mesh *scene_mesh = new Mesh("Piano", 0xffffff, true, false, false);
                 Actor *a = Shape::actor(0.5, 0.5, 0.5);
                 Mesh *hand = Shape::hand(0);
-                crosshair = Shape::crosshair(0);
+                crosshair2 = Shape::crosshair(0);
 
                 s->set_handler(__1person_handler);
 
@@ -446,12 +450,12 @@ class Template
                 hand->set_before_draw_function(disable_depth);
                 hand->add_texture_image("assets/hand_pointning.png");
 
-                s->add_mesh(crosshair);
-                crosshair->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
-                crosshair->set_color(0xABC000);
-                crosshair->disable_sphere_collider();
-                crosshair->set_before_draw_function(disable_depth);
-                crosshair->add_texture_image("textures/crosshair.png");
+                s->add_mesh(crosshair2);
+                crosshair2->rotate(PIMED, vec3(1.0f, 0.0f, 0.0f));
+                crosshair2->set_color(0xABC000);
+                crosshair2->disable_sphere_collider();
+                crosshair2->set_before_draw_function(disable_depth);
+                crosshair2->add_texture_image("textures/crosshair.png");
 
                 constexpr int piano_keys_white = 52;
                 constexpr int piano_keys_black = 36;
@@ -502,7 +506,7 @@ class Template
                 s->use_shader("shaders/texture_vs.glsl", "shaders/texture_fs.glsl");
                 GLuint shader_program = setShaders("shaders/crosshair_vs.glsl", "shaders/crosshair_fs.glsl");
                 hand->set_shader(shader_program);
-                crosshair->set_shader(shader_program);
+                crosshair2->set_shader(shader_program);
 
                 return s;
         }

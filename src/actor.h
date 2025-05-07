@@ -13,14 +13,19 @@ class Actor : public Mesh
         Camera *camera;
         float camera_offset_x;
         float camera_offset_y;
-        bool jumping = false;
+        float camera_offset_z;
+        bool jumping;
+        float body_height;
 
     public:
         Actor(char *name)
         : Mesh(name, 0x93ECFB),
           camera(nullptr),
           camera_offset_x(2.0f),
-          camera_offset_y(1.0f)
+          camera_offset_y(1.0f),
+          camera_offset_z(0.0f),
+          jumping(false),
+          body_height(0)
         {
                 set_before_draw_function(_before);
         }
@@ -30,10 +35,17 @@ class Actor : public Mesh
                 camera_offset_y = y;
         }
 
+        void set_camera_zoffset(float z)
+        {
+                camera_offset_z = z;
+        }
+
+
         float get_default_height()
         {
-                static float __height = get_absolute_position().y;
-                return __height;
+                if (body_height == 0)
+                        body_height = get_absolute_position().y;
+                return body_height;
         }
 
         bool is_bottom_colliding()
@@ -77,20 +89,12 @@ class Actor : public Mesh
                 if (camera == nullptr) return;
 
                 /* for aimlabs */
-                // mat4 m = get_absolute_model();
-                // vec3 pos = get_absolute_position();
-                // vec3 dirf = normalize(vec3(m[2]));
-                // vec3 right = normalize(vec3(m[0])) * 0.4f;
-                // camera->look_at(pos + right);
-                // camera->place(pos + right +  dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
-                // camera->set_up(vec3(m[1]));
-
-                /* for piano */
                 mat4 m = get_absolute_model();
                 vec3 pos = get_absolute_position();
                 vec3 dirf = normalize(vec3(m[2]));
-                camera->look_at(pos);
-                camera->place(pos + dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
+                vec3 right = normalize(vec3(m[0])) * camera_offset_z;
+                camera->look_at(pos + right);
+                camera->place(pos + right + dirf * camera_offset_x + vec3(0.0f, camera_offset_y, 0.0f));
                 camera->set_up(vec3(m[1]));
         }
 
@@ -98,6 +102,12 @@ class Actor : public Mesh
         Camera *get_following_camera()
         {
                 return camera;
+        }
+
+        void init()
+        {
+                Mesh::init();
+                body_height = get_absolute_position().y;
         }
 };
 

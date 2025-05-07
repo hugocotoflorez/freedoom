@@ -36,7 +36,7 @@ using namespace glm;
 GLuint width = 640;
 GLuint height = 480;
 
-Scene *main_scene;
+Scene *active_scene;
 
 double *
 interframe_time()
@@ -89,11 +89,16 @@ fps()
 int
 mainloop(GLFWwindow *window)
 {
-        main_scene = Template::piano_scene();
-        main_scene->init();
+        Scene *scenes[2];
+        scenes[0] = Template::plain_scene();
+        scenes[1] = Template::piano_scene();
+        active_scene = scenes[0];
+        scenes[0]->init();
+        scenes[1]->init();
 
         while (!glfwWindowShouldClose(window)) {
-                main_scene->process_input(window);
+
+                active_scene->process_input(window);
                 glfwPollEvents();
 
                 fps();
@@ -102,10 +107,15 @@ mainloop(GLFWwindow *window)
                 glClear(GL_COLOR_BUFFER_BIT);
                 glClear(GL_DEPTH_BUFFER_BIT);
 
-                main_scene->render();
-                main_scene->draw();
+                active_scene->render();
+                active_scene->draw();
 
                 glfwSwapBuffers(window);
+
+                if (oneclick(window, GLFW_KEY_ENTER)) {
+                        active_scene = (active_scene == scenes[0]) ? scenes[1] : scenes[0];
+                }
+
         }
 
         return 0;
